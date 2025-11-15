@@ -1,0 +1,318 @@
+/* header.css - Isolated styles for the accessibility header (SIMPLIFIED) */
+
+/* Main header container - use !important to prevent overrides */
+#awb-accessibility-header {
+    /* Position and layout */
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 60px !important;
+    z-index: 2147483647 !important; /* Maximum z-index value */
+    
+    /* Visual styling */
+    background: #ffffff !important;
+    border-bottom: 2px solid #222222 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+    
+    /* Flexbox layout */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0 20px !important;
+    box-sizing: border-box !important;
+    
+    /* Reset any potential overrides */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    letter-spacing: normal !important;
+    color: #222222 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    overflow: visible !important;
+}
+
+/* Prevent any child elements from being affected */
+#awb-accessibility-header * {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+    line-height: 1.5 !important;
+    letter-spacing: normal !important;
+    color: inherit !important;
+    background: transparent !important;
+    box-sizing: border-box !important;
+}
+
+/* Logo and branding section */
+#awb-accessibility-header .awb-branding {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    flex-shrink: 0 !important;
+}
+
+#awb-accessibility-header .awb-logo-btn {
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: transform 0.2s ease, opacity 0.2s ease !important;
+    border-radius: 50% !important;
+}
+
+#awb-accessibility-header .awb-logo-btn:hover {
+    transform: scale(1.1) !important;
+    opacity: 0.8 !important;
+}
+
+#awb-accessibility-header .awb-logo-btn:active {
+    transform: scale(0.95) !important;
+}
+
+#awb-accessibility-header .awb-logo {
+    height: 35px !important;
+    width: 35px !important;
+    object-fit: contain !important;
+    display: block !important;
+}
+
+#awb-accessibility-header .awb-title {
+    font-size: 1.1em !important;
+    font-weight: bold !important;
+    color: #222222 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    white-space: nowrap !important;
+}
+
+/* Controls section */
+#awb-accessibility-header .awb-controls {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-end !important;
+}
+
+/* Modes dropdown container */
+#awb-accessibility-header .awb-modes-container {
+    position: relative !important;
+    display: inline-block !important;
+}
+
+/* Modes dropdown menu */
+#awb-accessibility-header .awb-modes-dropdown {
+    display: none !important;
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    margin-top: 8px !important;
+    background: #ffffff !important;
+    border: 2px solid #222222 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    min-width: 180px !important;
+    z-index: 2147483647 !important;
+    padding: 4px 0 !important;
+}
+
+#awb-accessibility-header .awb-modes-dropdown.show {
+    display: block !important;
+}
+
+/* Dropdown items */
+#awb-accessibility-header .awb-dropdown-item {
+    display: block !important;
+    width: 100% !important;
+    padding: 10px 16px !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #222222 !important;
+    text-align: left !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    transition: background 0.2s ease !important;
+    border-radius: 0 !important;
+}
+
+#awb-accessibility-header .awb-dropdown-item:hover {
+    background: #f0f0f0 !important;
+}
+
+#awb-accessibility-header .awb-dropdown-divider {
+    height: 1px !important;
+    background: #e0e0e0 !important;
+    border: none !important;
+    margin: 4px 0 !important;
+}
+
+/* Base button styles */
+#awb-accessibility-header .awb-mode-btn,
+#awb-accessibility-header .awb-feature-btn {
+    padding: 8px 14px !important;
+    border: 2px solid #222222 !important;
+    border-radius: 6px !important;
+    background: #ffffff !important;
+    color: #222222 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+    line-height: 1.5 !important;
+    letter-spacing: normal !important;
+    margin: 0 !important;
+    text-transform: none !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+}
+
+/* Button hover states */
+#awb-accessibility-header .awb-mode-btn:hover,
+#awb-accessibility-header .awb-feature-btn:hover {
+    background: #f0f0f0 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Button active states */
+#awb-accessibility-header .awb-mode-btn:active,
+#awb-accessibility-header .awb-feature-btn:active {
+    transform: translateY(0) !important;
+}
+
+/* Active/selected button state */
+#awb-accessibility-header .awb-feature-btn.active {
+    background: #4CAF50 !important;
+    color: #ffffff !important;
+    border-color: #4CAF50 !important;
+}
+
+#awb-accessibility-header .awb-mode-btn.active {
+    background: #2196F3 !important;
+    color: #ffffff !important;
+    border-color: #2196F3 !important;
+}
+
+/* Spacer between sections */
+#awb-accessibility-header .awb-spacer {
+    width: 16px !important;
+    height: 1px !important;
+    flex-shrink: 0 !important;
+}
+
+/* Prevent header from being affected by page-wide filters */
+#awb-accessibility-header {
+    filter: none !important;
+    backdrop-filter: none !important;
+}
+
+/* Animation for TTS notification */
+@keyframes awb-slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* TTS notification styling */
+#tts-notification {
+    position: fixed !important;
+    top: 75px !important; /* Below the header */
+    right: 20px !important;
+    background: #48bb78 !important;
+    color: white !important;
+    padding: 12px 16px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    z-index: 2147483646 !important; /* Just below header */
+    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4) !important;
+    animation: awb-slideIn 0.3s ease !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+    line-height: 1.5 !important;
+    letter-spacing: normal !important;
+}
+
+/* Floating button styling */
+.awb-floating-btn {
+    position: fixed !important;
+    bottom: 20px !important;
+    right: 20px !important;
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 50% !important;
+    background: #ffffff !important;
+    border: 3px solid #222222 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    cursor: move !important;
+    z-index: 2147483645 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: box-shadow 0.2s ease !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    touch-action: none !important;
+}
+
+.awb-floating-btn:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.awb-floating-btn:active {
+    cursor: grabbing !important;
+}
+
+.awb-floating-btn img {
+    width: 35px !important;
+    height: 35px !important;
+    object-fit: contain !important;
+    pointer-events: none !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 1200px) {
+    #awb-accessibility-header .awb-title {
+        display: none !important;
+    }
+    
+    #awb-accessibility-header {
+        padding: 0 12px !important;
+    }
+    
+    #awb-accessibility-header .awb-controls {
+        gap: 6px !important;
+    }
+    
+    #awb-accessibility-header .awb-mode-btn,
+    #awb-accessibility-header .awb-feature-btn {
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    #awb-accessibility-header {
+        height: 50px !important;
+    }
+    
+    #tts-notification {
+        top: 65px !important;
+    }
+}
