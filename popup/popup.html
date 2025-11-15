@@ -7,11 +7,38 @@
     <div class="popup-container">
         <h3>Adaptive Web Buddy</h3>
         
-        <!-- Profile Buttons -->
-        <div class="profile-buttons">
-            <button class="profile-btn" data-profile="dyslexia">Dyslexia Mode</button>
-            <button class="profile-btn" data-profile="focus">Focus Mode</button>
-            <button class="profile-btn" data-profile="reset">Reset</button>
+        <!-- Modes Dropdown Button -->
+        <div class="modes-section">
+            <button class="modes-btn" id="modesBtn"> Modes</button>
+            <div class="modes-dropdown" id="modesDropdown">
+                <button class="mode-option" data-profile="dyslexia"> Dyslexia Mode</button>
+                <button class="mode-option" data-profile="focus"> Focus Mode</button>
+                <button class="mode-option" data-profile="reading"> Reading Mode</button>
+                <button class="mode-option" data-profile="autism"> Autism Comfort Mode</button>
+                <hr class="dropdown-divider">
+                <button class="mode-option" data-profile="reset"> Reset</button>
+            </div>
+        </div>
+        
+        <!-- Text to Speech Button -->
+        <button class="text-to-speech-btn" id="ttsBtn"> Text to Speech</button>
+        
+        <!-- Zapper Button -->
+        <button class="zapper-btn" id="zapperBtn"> Zapper - Remove Elements</button>
+        <div class="zapper-info" id="zapperInfo">
+            <p>Click on any element to remove it. Press ESC to exit.</p>
+        </div>
+        
+        <!-- Accessibility Features Section -->
+        <div class="accessibility-features">
+            <div class="feature-row">
+                <button class="feature-btn" id="highContrastBtn" title="Enable high contrast mode"> High Contrast</button>
+                <button class="feature-btn" id="dyslexicFontBtn" title="Use dyslexic-friendly font"> Dyslexic Font</button>
+            </div>
+            <div class="feature-row">
+                <button class="feature-btn" id="lineHeightBtn" title="Increase line height"> Line Height</button>
+                <button class="feature-btn" id="letterSpacingBtn" title="Increase letter spacing"> Spacing</button>
+            </div>
         </div>
         
         <!-- Custom Settings (for Phase 2) -->

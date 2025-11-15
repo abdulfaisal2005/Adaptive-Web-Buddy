@@ -22,6 +22,33 @@ const profiles = {
             hideImages: true,
             hideVideos: true
         }
+    },
+    reading: {
+        name: "Reading Mode",
+        settings: {
+            fontFamily: "Georgia, serif",
+            fontSize: "17px",
+            lineHeight: "2.0",
+            letterSpacing: "0.05em",
+            backgroundColor: "#fffacd",
+            textColor: "#2c3e50",
+            hideImages: false,
+            hideVideos: false
+        }
+    },
+    autism: {
+        name: "Autism Comfort Mode",
+        settings: {
+            fontFamily: "Arial, sans-serif",
+            fontSize: "16px",
+            lineHeight: "1.6",
+            letterSpacing: "0.08em",
+            backgroundColor: "#f5f5f5",
+            textColor: "#333333",
+            hideVideos: true,
+            hideFlashingElements: true,
+            reducedAnimations: true
+        }
     }
-    // Add more profiles as needed
+    // Add more profiles as needed
 };

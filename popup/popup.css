@@ -8,7 +8,7 @@
 }
 
 body {
-    width: 320px;
+    width: 380px;
     min-height: 400px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -40,6 +40,164 @@ h3 {
     flex-direction: column;
     gap: 10px;
     margin-bottom: 20px;
+}
+
+/* Modes Section */
+.modes-section {
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.modes-btn {
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 8px;
+    background: #667eea;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    white-space: nowrap;
+    overflow: visible;
+}
+
+.modes-btn:hover {
+    background: #5568d3;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+}
+
+.modes-btn:active {
+    transform: translateY(0);
+}
+
+.modes-btn.active::after {
+    content: "▼";
+    font-size: 10px;
+    margin-left: 4px;
+}
+
+.modes-btn:not(.active)::after {
+    content: "▶";
+    font-size: 10px;
+    margin-left: 4px;
+}
+
+/* Modes Dropdown */
+.modes-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    overflow: hidden;
+    margin-top: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+.modes-dropdown.show {
+    display: flex;
+    flex-direction: column;
+}
+
+.mode-option {
+    padding: 12px 16px;
+    border: none;
+    background: white;
+    color: #4a5568;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mode-option:hover {
+    background: #f7fafc;
+    color: #2d3748;
+}
+
+.mode-option[data-profile="dyslexia"] {
+    border-left: 4px solid #4299e1;
+    padding-left: 12px;
+}
+
+.mode-option[data-profile="focus"] {
+    border-left: 4px solid #48bb78;
+    padding-left: 12px;
+}
+
+.mode-option[data-profile="reading"] {
+    border-left: 4px solid #ed8936;
+    padding-left: 12px;
+}
+
+.mode-option[data-profile="autism"] {
+    border-left: 4px solid #9f7aea;
+    padding-left: 12px;
+}
+
+.mode-option[data-profile="reset"] {
+    border-left: 4px solid #f56565;
+    padding-left: 12px;
+}
+
+.dropdown-divider {
+    height: 1px;
+    border: none;
+    background: #e2e8f0;
+    margin: 4px 0;
+}
+
+/* Text to Speech Button */
+.text-to-speech-btn {
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 8px;
+    background: #48bb78;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+    white-space: nowrap;
+    overflow: visible;
+}
+
+.text-to-speech-btn:hover {
+    background: #38a169;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(72, 187, 120, 0.6);
+}
+
+.text-to-speech-btn:active {
+    transform: translateY(0);
+}
+
+.text-to-speech-btn.active {
+    background: #22543d;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .profile-btn {
@@ -329,5 +487,144 @@ input:checked + .toggle-slider:before {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #a0aec0;
+    background: #a0aec0;
+}
+
+/* Accessibility Features Section */
+.accessibility-features {
+    background: #f0f4f8;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #dfe9f3;
+}
+
+.feature-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.feature-row:last-child {
+    margin-bottom: 0;
+}
+
+.feature-btn {
+    padding: 10px 12px;
+    border: 2px solid #cbd5e0;
+    background: white;
+    color: #4a5568;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.feature-btn:hover {
+    background: #edf2f7;
+    border-color: #a0aec0;
+    transform: translateY(-1px);
+}
+
+.feature-btn:active {
+    transform: translateY(0);
+}
+
+.feature-btn.active {
+    background: #4299e1;
+    color: white;
+    border-color: #4299e1;
+}
+
+.feature-btn#highContrastBtn.active {
+    background: #1a202c;
+    color: #ffff00;
+}
+
+.feature-btn#dyslexicFontBtn.active {
+    background: #ed8936;
+}
+
+.feature-btn#lineHeightBtn.active {
+    background: #9f7aea;
+}
+
+.feature-btn#letterSpacingBtn.active {
+    background: #38b2ac;
+}
+
+/* Zapper Button */
+.zapper-btn {
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+    white-space: nowrap;
+    overflow: visible;
+}
+
+.zapper-btn:hover {
+    background: linear-gradient(135deg, #f5576c 0%, #d91a46 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(245, 87, 108, 0.6);
+}
+
+.zapper-btn:active {
+    transform: translateY(0);
+}
+
+.zapper-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+}
+
+.zapper-info {
+    display: none;
+    background: #fff5f5;
+    border-left: 4px solid #f5576c;
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: #742a2a;
+}
+
+.zapper-info.show {
+    display: block;
+    animation: slideDown 0.3s ease;
+}
+
+.zapper-info p {
+    margin: 0;
+    font-weight: 500;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
