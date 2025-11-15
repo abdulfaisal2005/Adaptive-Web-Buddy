@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="popup-container">
+        <h3>Adaptive Web Buddy</h3>
+        
+        <!-- Profile Buttons -->
+        <div class="profile-buttons">
+            <button class="profile-btn" data-profile="dyslexia">Dyslexia Mode</button>
+            <button class="profile-btn" data-profile="focus">Focus Mode</button>
+            <button class="profile-btn" data-profile="reset">Reset</button>
+        </div>
+        
+        <!-- Custom Settings (for Phase 2) -->
+        <div class="custom-settings">
+            <label>Font Size: <span id="fontSizeValue">16</span>px</label>
+            <input type="range" id="fontSizeSlider" min="12" max="32" value="16">
+        </div>
+    </div>
+    
+    <script src="../profiles/profiles.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>

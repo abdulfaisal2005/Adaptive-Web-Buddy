@@ -1,0 +1,23 @@
+{
+    "manifest_version": 3,
+    "name": "Adaptive Web Buddy",
+    "version": "1.0",
+    "description": "Make the web accessible for everyone",
+    
+    "permissions": [
+        "storage",
+        "activeTab"
+    ],
+    
+    "action": {
+        "default_popup": "popup/popup.html",
+        "default_title": "Adaptive Web Buddy"
+    },
+    
+    "content_scripts": [
+        {
+            "matches": ["<all_urls>"],
+            "js": ["content/contentScript.js"]
+}
+]
+}
