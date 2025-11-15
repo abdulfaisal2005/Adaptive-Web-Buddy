@@ -1,6 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaptive Web Buddy</title>
     <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -9,7 +12,7 @@
         
         <!-- Modes Dropdown Button -->
         <div class="modes-section">
-            <button class="modes-btn" id="modesBtn"> Modes</button>
+            <button class="modes-btn" id="modesBtn">Modes</button>
             <div class="modes-dropdown" id="modesDropdown">
                 <button class="mode-option" data-profile="dyslexia"> Dyslexia Mode</button>
                 <button class="mode-option" data-profile="focus"> Focus Mode</button>
@@ -43,10 +46,39 @@
         
         <!-- Custom Settings (for Phase 2) -->
         <div class="custom-settings">
-            <label>Font Size: <span id="fontSizeValue">16</span>px</label>
-            <input type="range" id="fontSizeSlider" min="12" max="32" value="16">
+            <label for="fontSizeSlider">Font Size: <span id="fontSizeValue">16</span>px</label>
+            <input type="range" id="fontSizeSlider" min="12" max="32" value="16" title="Adjust font size">
+        </div>
+        
+        <!-- AI Summarization Section -->
+        <div class="ai-section">
+            <button class="ai-summarize-btn" id="summarizeBtn">✨ AI Summarize Page</button>
+            <div id="summaryStatus" class="summary-status"></div>
+            <div id="summaryOutput" class="summary-output"></div>
+        </div>
+        
+        <!-- Settings Button -->
+        <button class="settings-btn" id="settingsBtn">⚙️ Settings</button>
+        
+        <!-- Settings Modal -->
+        <div id="settingsModal" class="settings-modal">
+            <div class="settings-modal-content">
+                <span class="close-btn" id="closeSettings">&times;</span>
+                <h2>Extension Settings</h2>
+                
+                <div class="settings-form">
+                    <label for="apiKeyInput">Gemini API Key:</label>
+                    <input type="password" id="apiKeyInput" placeholder="Paste your API key here">
+                    <p class="help-text">
+                        Get your free API key from: <a href="https://aistudio.google.com/" target="_blank" rel="noopener">https://aistudio.google.com/</a>
+                    </p>
+                    <button id="saveApiKeyBtn" class="save-btn">Save API Key</button>
+                    <div id="apiKeyStatus"></div>
+                </div>
+            </div>
         </div>
     </div>
+    <script src="../config.js"></script>
     <script src="../profiles/profiles.js"></script>
     <script src="popup.js"></script>
 </body>

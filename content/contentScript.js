@@ -1,4 +1,5 @@
 // contentScript.js - Actually modifies the webpage DOM
+console.log('[Adaptive Web Buddy] Content script loaded');
 
 // Text-to-Speech state
 let ttsEnabled = false;
@@ -17,31 +18,41 @@ let accessibilityFeatures = {
 
 // Listen for messages from popup.js
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-    console.log("Message received in content script:", request);
+    console.log("[Adaptive Web Buddy] Message received:", request.action);
     
-    if (request.action === 'applyProfile') {
-        applyProfileSettings(request.profile.settings);
-        sendResponse({status: 'Profile applied: ' + request.profile.name});
-    }
-    else if (request.action === 'updateSetting') {
-        updateSingleSetting(request.setting, request.value);
-        sendResponse({status: 'Setting updated'});
-    }
-    else if (request.action === 'resetAll') {
-        resetAllChanges();
-        sendResponse({status: 'All changes reset'});
-    }
-    else if (request.action === 'toggleTextToSpeech') {
-        toggleTextToSpeech(request.enabled);
-        sendResponse({status: 'Text-to-Speech ' + (request.enabled ? 'enabled' : 'disabled')});
-    }
-    else if (request.action === 'toggleFeature') {
-        toggleAccessibilityFeature(request.feature, request.enabled);
-        sendResponse({status: 'Feature ' + request.feature + ' ' + (request.enabled ? 'enabled' : 'disabled')});
-    }
-    else if (request.action === 'toggleZapper') {
-        toggleZapper(request.enabled);
-        sendResponse({status: 'Zapper ' + (request.enabled ? 'enabled' : 'disabled')});
+    try {
+        if (request.action === 'applyProfile') {
+            applyProfileSettings(request.profile.settings);
+            sendResponse({status: 'Profile applied: ' + request.profile.name});
+        }
+        else if (request.action === 'updateSetting') {
+            updateSingleSetting(request.setting, request.value);
+            sendResponse({status: 'Setting updated'});
+        }
+        else if (request.action === 'resetAll') {
+            resetAllChanges();
+            sendResponse({status: 'All changes reset'});
+        }
+        else if (request.action === 'toggleTextToSpeech') {
+            toggleTextToSpeech(request.enabled);
+            sendResponse({status: 'Text-to-Speech ' + (request.enabled ? 'enabled' : 'disabled')});
+        }
+        else if (request.action === 'toggleFeature') {
+            toggleAccessibilityFeature(request.feature, request.enabled);
+            sendResponse({status: 'Feature ' + request.feature + ' ' + (request.enabled ? 'enabled' : 'disabled')});
+        }
+        else if (request.action === 'toggleZapper') {
+            toggleZapper(request.enabled);
+            sendResponse({status: 'Zapper ' + (request.enabled ? 'enabled' : 'disabled')});
+        }
+        else if (request.action === 'GET_PAGE_TEXT') {
+            const pageText = extractPageText();
+            console.log("[Adaptive Web Buddy] Extracted text length:", pageText.length);
+            sendResponse({text: pageText});
+        }
+    } catch (error) {
+        console.error("[Adaptive Web Buddy] Error handling message:", error);
+        sendResponse({error: error.message});
     }
     
     return true; // Keep message channel open for async response
@@ -59,6 +70,15 @@ function applyProfileSettings(settings) {
     document.body.style.backgroundColor = settings.backgroundColor;
     document.body.style.color = settings.textColor;
     
+    // Apply font size to all text elements for better coverage
+    const textElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, li, td, th, div, a, button, label, article, section');
+    textElements.forEach(el => {
+        el.style.fontSize = settings.fontSize;
+        el.style.fontFamily = settings.fontFamily;
+        el.style.lineHeight = settings.lineHeight;
+        el.style.letterSpacing = settings.letterSpacing;
+    });
+    
     // Apply content hiding
     if (settings.hideVideos) {
         hideElements('video');
@@ -73,7 +93,17 @@ function applyProfileSettings(settings) {
 
 // Update a single setting
 function updateSingleSetting(setting, value) {
-    document.body.style[setting] = value;
+    if (setting === 'fontSize') {
+        // Apply font size to all text elements for better coverage
+        const textElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, li, td, th, div, a, button, label, article, section');
+        textElements.forEach(el => {
+            el.style.fontSize = value;
+        });
+        // Also apply to body as fallback
+        document.body.style.fontSize = value;
+    } else {
+        document.body.style[setting] = value;
+    }
 }
 
 // Reset everything to original state
@@ -84,6 +114,12 @@ function resetAllChanges() {
     document.body.style.letterSpacing = '';
     document.body.style.backgroundColor = '';
     document.body.style.color = '';
+    
+    // Reset font size on all text elements
+    const textElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, li, td, th, div, a, button, label, article, section');
+    textElements.forEach(el => {
+        el.style.fontSize = '';
+    });
     
     // Show all hidden elements
     showAllElements();
@@ -471,4 +507,56 @@ function showRemovalFeedback(element) {
 
 function showZapperCursor() {
     document.body.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="none" stroke="%23f5576c" stroke-width="2"/><line x1="16" y1="5" x2="16" y2="10" stroke="%23f5576c" stroke-width="2"/><line x1="16" y1="22" x2="16" y2="27" stroke="%23f5576c" stroke-width="2"/><line x1="5" y1="16" x2="10" y2="16" stroke="%23f5576c" stroke-width="2"/><line x1="22" y1="16" x2="27" y2="16" stroke="%23f5576c" stroke-width="2"/></svg>') 16 16, crosshair`;
+}// content/contentScript.js
+
+chrome.runtime.onMessage.addListener(
+    (request, sender, sendResponse) => {
+        // Check for the summarization action
+        if (request.action === "REQUEST_PAGE_TEXT") {
+            // Extract all visible text from the body
+            const fullText = document.body.innerText; 
+            
+            // Send the raw text back to the popup.js
+            sendResponse({ text: fullText }); 
+
+            // Return true to indicate the response will be sent asynchronously (important for fetch)
+            return true; 
+        }
+    }
+);
+
+// Function to extract all text from the page (OPTIMIZED for speed)
+function extractPageText() {
+    // Use direct DOM traversal instead of cloning (much faster)
+    const textContent = [];
+    
+    // Skip these elements
+    const skipSelectors = 'script, style, noscript, iframe, nav, .hidden, [hidden], [aria-hidden="true"]';
+    const skipSet = new Set(document.querySelectorAll(skipSelectors));
+    
+    // Extract text from main content areas first (faster)
+    const mainSelectors = ['main', 'article', '.content', '.post', '#content', '.entry-content'];
+    let foundMain = false;
+    
+    for (let selector of mainSelectors) {
+        const elem = document.querySelector(selector);
+        if (elem && elem.innerText && elem.innerText.length > 100) {
+            let text = elem.innerText.trim();
+            text = text.replace(/\s+/g, ' ').slice(0, 5000); // Limit to first 5000 chars for speed
+            if (text.length > 100) {
+                textContent.push(text);
+                foundMain = true;
+                break;
+            }
+        }
+    }
+    
+    // If main content not found, get body text
+    if (!foundMain) {
+        let text = document.body.innerText || document.documentElement.innerText;
+        text = text.replace(/\s+/g, ' ').slice(0, 5000); // Limit to first 5000 chars
+        textContent.push(text);
+    }
+    
+    return textContent.join('\n').trim();
 }

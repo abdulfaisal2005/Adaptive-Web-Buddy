@@ -1,4 +1,3 @@
-// profiles.js - Define all our profiles and their settings
 const profiles = {
     dyslexia: {
         name: "Dyslexia Mode",
