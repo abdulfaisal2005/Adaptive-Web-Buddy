@@ -71,20 +71,76 @@ function getPageContentElements() {
 function applyProfileSettings(settings) {
     console.log("Applying settings:", settings);
     
-    // Apply visual settings
-    document.body.style.fontFamily = settings.fontFamily;
-    document.body.style.fontSize = settings.fontSize;
-    document.body.style.lineHeight = settings.lineHeight;
-    document.body.style.letterSpacing = settings.letterSpacing;
-    document.body.style.backgroundColor = settings.backgroundColor;
-    document.body.style.color = settings.textColor;
+    // Remove existing profile styles
+    let profileStyle = document.getElementById('awb-profile-style');
+    if (profileStyle) profileStyle.remove();
+    
+    // Create new style element for profile
+    profileStyle = document.createElement('style');
+    profileStyle.id = 'awb-profile-style';
+    
+    // Build CSS rules with maximum specificity (excluding header)
+    let cssRules = `
+        body,
+        html {
+            background-color: ${settings.backgroundColor} !important;
+            color: ${settings.textColor} !important;
+        }
+        
+        /* Apply to all elements except header */
+        body *:not(#awb-accessibility-header):not(#awb-accessibility-header *):not(#awb-floating-btn):not(#awb-floating-btn *):not(#awb-summary-panel):not(#awb-summary-panel *):not(#awb-settings-modal):not(#awb-settings-modal *) {
+            background-color: ${settings.backgroundColor} !important;
+            color: ${settings.textColor} !important;
+            font-family: ${settings.fontFamily} !important;
+            font-size: ${settings.fontSize} !important;
+            line-height: ${settings.lineHeight} !important;
+            letter-spacing: ${settings.letterSpacing} !important;
+        }
+        
+        /* Ensure divs and containers inherit background */
+        body div:not(#awb-accessibility-header):not(#awb-accessibility-header *):not(#awb-floating-btn):not(#awb-summary-panel):not(#awb-summary-panel *):not(#awb-settings-modal):not(#awb-settings-modal *),
+        body section:not(#awb-accessibility-header):not(#awb-accessibility-header *):not(#awb-summary-panel):not(#awb-summary-panel *):not(#awb-settings-modal):not(#awb-settings-modal *),
+        body article:not(#awb-accessibility-header):not(#awb-accessibility-header *):not(#awb-summary-panel):not(#awb-summary-panel *):not(#awb-settings-modal):not(#awb-settings-modal *),
+        body main:not(#awb-accessibility-header):not(#awb-accessibility-header *):not(#awb-summary-panel):not(#awb-summary-panel *):not(#awb-settings-modal):not(#awb-settings-modal *),
+        body header:not(#awb-accessibility-header):not(#awb-accessibility-header *):not(#awb-summary-panel):not(#awb-summary-panel *):not(#awb-settings-modal):not(#awb-settings-modal *),
+        body footer:not(#awb-accessibility-header):not(#awb-accessibility-header *):not(#awb-summary-panel):not(#awb-summary-panel *):not(#awb-settings-modal):not(#awb-settings-modal *),
+        body nav:not(#awb-accessibility-header):not(#awb-accessibility-header *):not(#awb-summary-panel):not(#awb-summary-panel *):not(#awb-settings-modal):not(#awb-settings-modal *),
+        body aside:not(#awb-accessibility-header):not(#awb-accessibility-header *):not(#awb-summary-panel):not(#awb-summary-panel *):not(#awb-settings-modal):not(#awb-settings-modal *) {
+            background-color: ${settings.backgroundColor} !important;
+        }
+        
+        /* Text elements should inherit text color */
+        body p:not(#awb-accessibility-header *):not(#awb-summary-panel *):not(#awb-settings-modal *),
+        body h1:not(#awb-accessibility-header *):not(#awb-summary-panel *):not(#awb-settings-modal *),
+        body h2:not(#awb-accessibility-header *):not(#awb-summary-panel *):not(#awb-settings-modal *),
+        body h3:not(#awb-accessibility-header *):not(#awb-summary-panel *):not(#awb-settings-modal *),
+        body h4:not(#awb-accessibility-header *):not(#awb-summary-panel *):not(#awb-settings-modal *),
+        body h5:not(#awb-accessibility-header *):not(#awb-summary-panel *):not(#awb-settings-modal *),
+        body h6:not(#awb-accessibility-header *):not(#awb-summary-panel *):not(#awb-settings-modal *),
+        body span:not(#awb-accessibility-header *):not(#awb-summary-panel *):not(#awb-settings-modal *),
+        body a:not(#awb-accessibility-header *):not(#awb-summary-panel *):not(#awb-settings-modal *),
+        body li:not(#awb-accessibility-header *):not(#awb-summary-panel *):not(#awb-settings-modal *),
+        body td:not(#awb-accessibility-header *):not(#awb-summary-panel *):not(#awb-settings-modal *),
+        body th:not(#awb-accessibility-header *):not(#awb-summary-panel *):not(#awb-settings-modal *),
+        body label:not(#awb-accessibility-header *):not(#awb-summary-panel *):not(#awb-settings-modal *) {
+            color: ${settings.textColor} !important;
+        }
+    `;
+    
+    profileStyle.innerHTML = cssRules;
+    document.head.appendChild(profileStyle);
     
     // Apply content hiding
     if (settings.hideVideos) hideElements('video');
+    else showElements('video');
+    
     if (settings.hideImages) hideElements('img');
+    else showElements('img');
     
     // Save applied settings for persistence
     saveCurrentSettings(settings);
+    
+    console.log('[Adaptive Web Buddy] Profile applied with background:', settings.backgroundColor);
 }
 
 // Update a single setting
@@ -94,6 +150,7 @@ function updateSingleSetting(setting, value) {
 
 // Reset everything to original state
 function resetAllChanges() {
+    // Reset body styles
     document.body.style.fontFamily = '';
     document.body.style.fontSize = '';
     document.body.style.lineHeight = '';
@@ -101,9 +158,46 @@ function resetAllChanges() {
     document.body.style.backgroundColor = '';
     document.body.style.color = '';
     
+    // Remove all custom style elements
+    const customStyles = [
+        'awb-font-size-style',
+        'awb-dyslexicFont-style',
+        'awb-lineHeight-style',
+        'awb-letterSpacing-style',
+        'awb-profile-style'  // Remove profile styles
+    ];
+    
+    customStyles.forEach(styleId => {
+        const style = document.getElementById(styleId);
+        if (style) style.remove();
+    });
+    
+    // Reset font size slider to default
+    const fontSizeSlider = document.getElementById('awb-font-size-slider');
+    if (fontSizeSlider) {
+        fontSizeSlider.value = 16;
+    }
+    
+    // Reset accessibility features state
+    accessibilityFeatures = {
+        dyslexicFont: false,
+        lineHeight: false,
+        letterSpacing: false,
+        fontSize: 100
+    };
+    
+    // Remove active class from accessibility items
+    const accessibilityItems = document.querySelectorAll('.awb-accessibility-item');
+    accessibilityItems.forEach(item => item.classList.remove('active'));
+    
     // Show all hidden elements
     showAllElements();
+    showElements('video');
+    showElements('img');
+    
     clearSavedSettings();
+    
+    console.log('[Adaptive Web Buddy] All settings reset to default');
 }
 
 // Helper functions
@@ -122,6 +216,17 @@ function showAllElements() {
     const elements = getPageContentElements();
     elements.forEach(el => {
         if (el.style.display === 'none') {
+            el.style.display = '';
+        }
+    });
+}
+
+function showElements(selector) {
+    const header = document.getElementById('awb-accessibility-header');
+    const elements = document.querySelectorAll(selector);
+    elements.forEach(el => {
+        // Don't show/hide elements inside the header
+        if (!header || !header.contains(el)) {
             el.style.display = '';
         }
     });
@@ -202,7 +307,7 @@ window.addEventListener('load', function() {
                     </button>
                     <button class="awb-accessibility-item" data-feature="lineHeight" id="awb-lineheight-item">
                         <span class="awb-checkbox"></span>
-                        ⬍ Line Height
+                        ⬆ Line Height
                     </button>
                     <button class="awb-accessibility-item" data-feature="letterSpacing" id="awb-letterspacing-item">
                         <span class="awb-checkbox"></span>
@@ -250,6 +355,7 @@ window.addEventListener('load', function() {
     
     // Add margin to body to account for fixed header (80px)
     document.body.style.marginTop = '80px';
+    
     // Create floating button (initially hidden)
     const floatingBtn = document.createElement('button');
     floatingBtn.id = 'awb-floating-btn';
@@ -300,6 +406,9 @@ function setupHeaderToggle() {
         header.style.setProperty('display', 'none', 'important');
         floatingBtn.style.setProperty('display', 'flex', 'important');
         
+        // Remove the margin-top from body when header is hidden
+        document.body.style.marginTop = '0px';
+        
         console.log('Header hidden, floating button shown');
     });
     
@@ -316,6 +425,9 @@ function setupHeaderToggle() {
             headerVisible = true;
             header.style.setProperty('display', 'flex', 'important');
             floatingBtn.style.setProperty('display', 'none', 'important');
+            
+            // Restore the margin-top to body when header is shown
+            document.body.style.marginTop = '80px';
         }
         
         // Reset the dragging flag
@@ -463,9 +575,10 @@ function setupModeButtons() {
                         fontSize: "18px",
                         lineHeight: "1.8",
                         letterSpacing: "0.1em",
-                        backgroundColor: "#f0f0f0",
+                        backgroundColor: "#f5f5f0",
                         textColor: "#000000",
-                        hideVideos: true
+                        hideVideos: false,
+                        hideImages: false
                     });
                     break;
                 case 'autism':
@@ -474,9 +587,10 @@ function setupModeButtons() {
                         fontSize: "16px",
                         lineHeight: "1.6",
                         letterSpacing: "0.08em",
-                        backgroundColor: "#f5f5f5",
+                        backgroundColor: "#f0f4f8",
                         textColor: "#333333",
-                        hideVideos: true,
+                        hideVideos: false,
+                        hideImages: false,
                         hideFlashingElements: true,
                         reducedAnimations: true
                     });
@@ -485,8 +599,10 @@ function setupModeButtons() {
                     applyProfileSettings({
                         fontFamily: "Arial, sans-serif",
                         fontSize: "16px",
-                        backgroundColor: "#1a1a1a",
-                        textColor: "#00ff00",
+                        lineHeight: "1.5",
+                        letterSpacing: "0.05em",
+                        backgroundColor: "#2d2d2d",
+                        textColor: "#e0e0e0",
                         hideImages: true,
                         hideVideos: true
                     });
@@ -497,7 +613,7 @@ function setupModeButtons() {
                         fontSize: "17px",
                         lineHeight: "2.0",
                         letterSpacing: "0.05em",
-                        backgroundColor: "#fffacd",
+                        backgroundColor: "#fffef0",
                         textColor: "#2c3e50",
                         hideImages: false,
                         hideVideos: false
@@ -515,7 +631,6 @@ function setupModeButtons() {
 function restoreSavedPreferences() {
     chrome.storage.local.get([
         'fontSizePx',
-
         'dyslexicFont',
         'lineHeight',
         'letterSpacing'
@@ -530,7 +645,6 @@ function restoreSavedPreferences() {
                 applyFontSize(result.fontSizePx);
             }
         }
-
         
         // Restore accessibility features
         if (result.dyslexicFont) {
@@ -606,7 +720,6 @@ function setupFeatureButtons() {
         };
     }
     
-    // Colorblindness Dropdown
     // Accessibility Settings Dropdown
     const accessibilityBtn = document.getElementById('awb-accessibility-btn');
     const accessibilityDropdown = document.getElementById('awb-accessibility-dropdown');
@@ -910,7 +1023,6 @@ function applyFontSize(fontSizePx) {
     document.head.appendChild(fontSizeStyle);
 }
 
-// Colorblindness Modes - CSS Filter Implementation
 // Zapper Functions
 function toggleZapper(enabled) {
     zapperEnabled = enabled;
@@ -1117,7 +1229,7 @@ async function summarizePageContent() {
             return;
         }
         
-        statusDiv.textContent = '🔄 Generating summary... Please wait 10-30 seconds...';
+        statusDiv.textContent = '📄 Generating summary... Please wait 10-30 seconds...';
         statusDiv.className = 'awb-summary-status loading show';
         console.log('[Adaptive Web Buddy] Sending to API...');
         
@@ -1286,7 +1398,6 @@ function showRemovalFeedback(element) {
     element.style.transform = 'scale(0.95)';
 }
 
-// Function to apply the filter to the <body>
 // Listener to receive messages from popup.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Message handler for future extensibility

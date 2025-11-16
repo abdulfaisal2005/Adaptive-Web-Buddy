@@ -387,7 +387,7 @@
     letter-spacing: normal !important;
 }
 
-/* Floating button styling */
+/* Floating button styling - FIXED */
 .awb-floating-btn {
     position: fixed !important;
     bottom: 20px !important;
@@ -400,7 +400,7 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
     cursor: move !important;
     z-index: 2147483645 !important;
-    display: flex !important;
+    display: none !important; /* Changed from flex to none by default */
     align-items: center !important;
     justify-content: center !important;
     transition: box-shadow 0.2s ease !important;
@@ -409,6 +409,7 @@
     user-select: none !important;
     -webkit-user-select: none !important;
     touch-action: none !important;
+    overflow: visible !important; /* Make sure icon is visible */
 }
 
 .awb-floating-btn:hover {
@@ -426,6 +427,9 @@
     pointer-events: none !important;
     user-select: none !important;
     -webkit-user-select: none !important;
+    display: block !important; /* Ensure image displays */
+    opacity: 1 !important; /* Make sure it's visible */
+    visibility: visible !important;
 }
 
 /* Responsive adjustments for smaller screens */
