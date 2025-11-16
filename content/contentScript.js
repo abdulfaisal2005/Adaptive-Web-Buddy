@@ -1,5 +1,4 @@
 // contentScript.js - Actually modifies the webpage DOM
-console.log('[Adaptive Web Buddy] Content script loaded');
 
 // Text-to-Speech state
 let ttsEnabled = false;
@@ -10,11 +9,15 @@ let removedElements = [];
 
 // Accessibility features state
 let accessibilityFeatures = {
-    highContrast: false,
     dyslexicFont: false,
     lineHeight: false,
-    letterSpacing: false
+    letterSpacing: false,
+    colorBlindnessMode: 'normal', // normal, deuteranopia, protanopia, tritanopia
+    fontSize: 100 // percentage, default 100%
 };
+
+// Header visibility state
+let headerVisible = true;
 
 // Listen for messages from popup.js
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
@@ -58,6 +61,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     return true; // Keep message channel open for async response
 });
 
+// Helper function to get all page content elements (excluding header and its children)
+function getPageContentElements() {
+    // Only select text-containing elements to avoid performance issues
+    const selector = 'p, h1, h2, h3, h4, h5, h6, span, div, li, a, button, label, td, th, article, section, main, nav, aside, blockquote, pre, code, strong, em, b, i';
+    return document.querySelectorAll(selector);
+}
+
 // Apply all settings from a profile
 function applyProfileSettings(settings) {
     console.log("Applying settings:", settings);
@@ -70,22 +80,9 @@ function applyProfileSettings(settings) {
     document.body.style.backgroundColor = settings.backgroundColor;
     document.body.style.color = settings.textColor;
     
-    // Apply font size to all text elements for better coverage
-    const textElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, li, td, th, div, a, button, label, article, section');
-    textElements.forEach(el => {
-        el.style.fontSize = settings.fontSize;
-        el.style.fontFamily = settings.fontFamily;
-        el.style.lineHeight = settings.lineHeight;
-        el.style.letterSpacing = settings.letterSpacing;
-    });
-    
     // Apply content hiding
-    if (settings.hideVideos) {
-        hideElements('video');
-    }
-    if (settings.hideImages) {
-        hideElements('img');
-    }
+    if (settings.hideVideos) hideElements('video');
+    if (settings.hideImages) hideElements('img');
     
     // Save applied settings for persistence
     saveCurrentSettings(settings);
@@ -93,17 +90,7 @@ function applyProfileSettings(settings) {
 
 // Update a single setting
 function updateSingleSetting(setting, value) {
-    if (setting === 'fontSize') {
-        // Apply font size to all text elements for better coverage
-        const textElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, li, td, th, div, a, button, label, article, section');
-        textElements.forEach(el => {
-            el.style.fontSize = value;
-        });
-        // Also apply to body as fallback
-        document.body.style.fontSize = value;
-    } else {
-        document.body.style[setting] = value;
-    }
+    document.body.style[setting] = value;
 }
 
 // Reset everything to original state
@@ -115,31 +102,29 @@ function resetAllChanges() {
     document.body.style.backgroundColor = '';
     document.body.style.color = '';
     
-    // Reset font size on all text elements
-    const textElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, li, td, th, div, a, button, label, article, section');
-    textElements.forEach(el => {
-        el.style.fontSize = '';
-    });
-    
     // Show all hidden elements
     showAllElements();
-    
-    // Clear saved settings
     clearSavedSettings();
 }
 
 // Helper functions
 function hideElements(selector) {
+    const header = document.getElementById('awb-accessibility-header');
     const elements = document.querySelectorAll(selector);
     elements.forEach(el => {
-        el.style.display = 'none';
+        // Don't hide elements inside the header
+        if (!header || !header.contains(el)) {
+            el.style.display = 'none';
+        }
     });
 }
 
 function showAllElements() {
-    const allElements = document.querySelectorAll('*');
-    allElements.forEach(el => {
-        el.style.display = '';
+    const elements = getPageContentElements();
+    elements.forEach(el => {
+        if (el.style.display === 'none') {
+            el.style.display = '';
+        }
     });
 }
 
@@ -161,6 +146,682 @@ window.addEventListener('load', function() {
     });
 });
 
+// Inject accessibility header on every page load
+(function injectAccessibilityHeader() {
+    // Prevent duplicate injection
+    if (document.getElementById('awb-accessibility-header')) return;
+    
+    // Wait for body to be available
+    if (!document.body) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', injectAccessibilityHeader);
+        } else {
+            setTimeout(injectAccessibilityHeader, 10);
+        }
+        return;
+    }
+    
+    const header = document.createElement('div');
+    header.id = 'awb-accessibility-header';
+    
+    header.innerHTML = `
+        <div class="awb-branding">
+            <button id="awb-toggle-header-btn" class="awb-logo-btn" title="Hide header">
+                <img src="${chrome.runtime.getURL('icons/logo.png')}" alt="Adaptive Web Buddy" class="awb-logo">
+            </button>
+            <span class="awb-title">Adaptive Web Buddy</span>
+        </div>
+        <div class="awb-controls">
+            <div class="awb-font-size-container">
+                <label for="awb-font-size-slider" class="awb-font-label">A</label>
+                <input type="range" id="awb-font-size-slider" class="awb-font-slider" min="12" max="32" value="16" step="1" title="Adjust font size (12px - 32px)">
+                <label for="awb-font-size-slider" class="awb-font-label awb-font-label-large">A</label>
+            </div>
+            <span class="awb-spacer"></span>
+            <div class="awb-modes-container">
+                <button id="awb-modes-btn" class="awb-mode-btn">📋 Modes</button>
+                <div id="awb-modes-dropdown" class="awb-modes-dropdown">
+                    <button class="awb-dropdown-item" data-mode="dyslexia">📖 Dyslexia</button>
+                    <button class="awb-dropdown-item" data-mode="autism">🧩 Autism</button>
+                    <button class="awb-dropdown-item" data-mode="focus">🎯 Focus</button>
+                    <button class="awb-dropdown-item" data-mode="reading">📚 Reading</button>
+                    <div class="awb-dropdown-divider"></div>
+                    <button class="awb-dropdown-item" data-mode="reset">🔄 Reset</button>
+                </div>
+            </div>
+            <span class="awb-spacer"></span>
+            <button id="awb-tts-btn" class="awb-feature-btn">🔊 TTS</button>
+            <button id="awb-zapper-btn" class="awb-feature-btn">⚡ Zapper</button>
+            
+            <!-- Colorblindness Modes Dropdown -->
+            <div class="awb-colorblind-container">
+                <button id="awb-colorblind-btn" class="awb-feature-btn" title="Color Blindness Modes">🎨 Color</button>
+                <div id="awb-colorblind-dropdown" class="awb-colorblind-dropdown">
+                    <button class="awb-colorblind-item" data-mode="normal">👁️ Normal Vision</button>
+                    <button class="awb-colorblind-item" data-mode="deuteranopia">🟢 Deuteranopia</button>
+                    <button class="awb-colorblind-item" data-mode="protanopia">🔴 Protanopia</button>
+                    <button class="awb-colorblind-item" data-mode="tritanopia">🔵 Tritanopia</button>
+                </div>
+            </div>
+            
+            <!-- Accessibility Settings Dropdown -->
+            <div class="awb-accessibility-container">
+                <button id="awb-accessibility-btn" class="awb-feature-btn" title="Accessibility Settings">⚙️ Accessibility</button>
+                <div id="awb-accessibility-dropdown" class="awb-accessibility-dropdown">
+                    <button class="awb-accessibility-item" data-feature="dyslexicFont" id="awb-dyslexicfont-item">
+                        <span class="awb-checkbox"></span>
+                        🔤 Dyslexic Font
+                    </button>
+                    <button class="awb-accessibility-item" data-feature="lineHeight" id="awb-lineheight-item">
+                        <span class="awb-checkbox"></span>
+                        ⬍ Line Height
+                    </button>
+                    <button class="awb-accessibility-item" data-feature="letterSpacing" id="awb-letterspacing-item">
+                        <span class="awb-checkbox"></span>
+                        ↔️ Letter Spacing
+                    </button>
+                </div>
+            </div>
+            
+            <button id="awb-ai-summarize-btn" class="awb-feature-btn">✨ Summarize</button>
+            <button id="awb-settings-btn" class="awb-feature-btn" title="Settings">⚙️ Settings</button>
+        </div>
+        <div id="awb-summary-panel" class="awb-summary-panel">
+            <div id="awb-summary-status" class="awb-summary-status"></div>
+            <div id="awb-summary-output" class="awb-summary-output"></div>
+        </div>
+        
+        <!-- API Key Settings Modal -->
+        <div id="awb-settings-modal" class="awb-settings-modal">
+            <div class="awb-settings-modal-content">
+                <div class="awb-settings-header">
+                    <h2>⚙️ Adaptive Web Buddy Settings</h2>
+                    <button id="awb-close-settings" class="awb-close-btn" title="Close">✕</button>
+                </div>
+                <div class="awb-settings-body">
+                    <div class="awb-settings-section">
+                        <h3>🔑 Google Gemini API Key</h3>
+                        <p class="awb-help-text">Required for AI Summarization feature. Get it free from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></p>
+                        <input type="password" id="awb-api-key-input" class="awb-settings-input" placeholder="Paste your API key here..." />
+                        <div class="awb-settings-buttons">
+                            <button id="awb-save-api-key" class="awb-settings-save-btn">💾 Save API Key</button>
+                            <button id="awb-clear-api-key" class="awb-settings-clear-btn">🗑️ Clear API Key</button>
+                        </div>
+                        <div id="awb-api-status" class="awb-settings-status"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.prepend(header);
+    
+    // Add margin to body to account for fixed header (80px)
+    document.body.style.marginTop = '80px';
+    // Create floating button (initially hidden)
+    const floatingBtn = document.createElement('button');
+    floatingBtn.id = 'awb-floating-btn';
+    floatingBtn.className = 'awb-floating-btn';
+    floatingBtn.title = 'Show Adaptive Web Buddy';
+    floatingBtn.style.display = 'none';
+    floatingBtn.innerHTML = `
+        <img src="${chrome.runtime.getURL('icons/logo.png')}" alt="Adaptive Web Buddy">
+    `;
+    document.body.appendChild(floatingBtn);
+    
+    // Setup header toggle functionality
+    setupHeaderToggle();
+    
+    // Setup modes dropdown functionality
+    setupModesDropdown();
+    
+    // Setup mode buttons
+    setupModeButtons();
+    
+    // Setup feature buttons
+    setupFeatureButtons();
+    
+    // Restore saved preferences
+    restoreSavedPreferences();
+})();
+
+// Setup header toggle functionality
+function setupHeaderToggle() {
+    const toggleBtn = document.getElementById('awb-toggle-header-btn');
+    const header = document.getElementById('awb-accessibility-header');
+    const floatingBtn = document.getElementById('awb-floating-btn');
+    
+    if (!toggleBtn || !header || !floatingBtn) {
+        console.log('Header toggle elements not found:', { toggleBtn, header, floatingBtn });
+        return;
+    }
+    
+    console.log('Setting up header toggle');
+    
+    // Toggle header visibility when logo is clicked
+    toggleBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Toggle button clicked, current visibility:', headerVisible);
+        
+        headerVisible = false;
+        header.style.setProperty('display', 'none', 'important');
+        floatingBtn.style.setProperty('display', 'flex', 'important');
+        
+        console.log('Header hidden, floating button shown');
+    });
+    
+    // Show header when floating button is clicked
+    floatingBtn.addEventListener('click', (e) => {
+        // Check if this was a drag operation
+        const wasDragging = floatingBtn.dataset.wasDragging === 'true';
+        
+        if (!wasDragging) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('Floating button clicked - showing header');
+            headerVisible = true;
+            header.style.setProperty('display', 'flex', 'important');
+            floatingBtn.style.setProperty('display', 'none', 'important');
+        }
+        
+        // Reset the dragging flag
+        floatingBtn.dataset.wasDragging = 'false';
+    });
+    
+    // Make floating button draggable
+    makeFloatingButtonDraggable(floatingBtn);
+}
+
+// Make the floating button draggable
+function makeFloatingButtonDraggable(element) {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    let isDragging = false;
+    
+    element.onmousedown = dragMouseDown;
+    element.ontouchstart = dragTouchStart;
+    
+    function dragMouseDown(e) {
+        e.preventDefault();
+        isDragging = false;
+        element.dataset.wasDragging = 'false';
+        
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+    }
+    
+    function dragTouchStart(e) {
+        isDragging = false;
+        element.dataset.wasDragging = 'false';
+        
+        const touch = e.touches[0];
+        pos3 = touch.clientX;
+        pos4 = touch.clientY;
+        
+        document.ontouchend = closeDragElement;
+        document.ontouchmove = elementDragTouch;
+    }
+    
+    function elementDrag(e) {
+        e.preventDefault();
+        isDragging = true;
+        element.dataset.wasDragging = 'true';
+        
+        // Calculate new cursor position
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        
+        // Set new position
+        const newTop = element.offsetTop - pos2;
+        const newLeft = element.offsetLeft - pos1;
+        
+        element.style.top = newTop + "px";
+        element.style.left = newLeft + "px";
+        element.style.bottom = "auto";
+        element.style.right = "auto";
+    }
+    
+    function elementDragTouch(e) {
+        isDragging = true;
+        element.dataset.wasDragging = 'true';
+        
+        const touch = e.touches[0];
+        
+        // Calculate new cursor position
+        pos1 = pos3 - touch.clientX;
+        pos2 = pos4 - touch.clientY;
+        pos3 = touch.clientX;
+        pos4 = touch.clientY;
+        
+        // Set new position
+        const newTop = element.offsetTop - pos2;
+        const newLeft = element.offsetLeft - pos1;
+        
+        element.style.top = newTop + "px";
+        element.style.left = newLeft + "px";
+        element.style.bottom = "auto";
+        element.style.right = "auto";
+    }
+    
+    function closeDragElement() {
+        document.onmouseup = null;
+        document.onmousemove = null;
+        document.ontouchend = null;
+        document.ontouchmove = null;
+        
+        // Small delay to ensure click handler sees the dragging flag
+        setTimeout(() => {
+            if (!isDragging) {
+                element.dataset.wasDragging = 'false';
+            }
+        }, 50);
+    }
+}
+
+// Setup modes dropdown
+function setupModesDropdown() {
+    const modesBtn = document.getElementById('awb-modes-btn');
+    const dropdown = document.getElementById('awb-modes-dropdown');
+    
+    if (!modesBtn || !dropdown) return;
+    
+    // Toggle dropdown
+    modesBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('show');
+        modesBtn.classList.toggle('active');
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        const modesContainer = document.querySelector('.awb-modes-container');
+        if (modesContainer && !modesContainer.contains(e.target)) {
+            dropdown.classList.remove('show');
+            modesBtn.classList.remove('active');
+        }
+    });
+}
+
+// Setup mode buttons in dropdown
+function setupModeButtons() {
+    const modeButtons = document.querySelectorAll('.awb-dropdown-item[data-mode]');
+    
+    modeButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const mode = btn.getAttribute('data-mode');
+            
+            // Close dropdown
+            const dropdown = document.getElementById('awb-modes-dropdown');
+            const modesBtn = document.getElementById('awb-modes-btn');
+            if (dropdown) dropdown.classList.remove('show');
+            if (modesBtn) modesBtn.classList.remove('active');
+            
+            // Apply mode
+            switch(mode) {
+                case 'dyslexia':
+                    applyProfileSettings({
+                        fontFamily: "Comic Sans MS, Arial",
+                        fontSize: "18px",
+                        lineHeight: "1.8",
+                        letterSpacing: "0.1em",
+                        backgroundColor: "#f0f0f0",
+                        textColor: "#000000",
+                        hideVideos: true
+                    });
+                    break;
+                case 'autism':
+                    applyProfileSettings({
+                        fontFamily: "Arial, sans-serif",
+                        fontSize: "16px",
+                        lineHeight: "1.6",
+                        letterSpacing: "0.08em",
+                        backgroundColor: "#f5f5f5",
+                        textColor: "#333333",
+                        hideVideos: true,
+                        hideFlashingElements: true,
+                        reducedAnimations: true
+                    });
+                    break;
+                case 'focus':
+                    applyProfileSettings({
+                        fontFamily: "Arial, sans-serif",
+                        fontSize: "16px",
+                        backgroundColor: "#1a1a1a",
+                        textColor: "#00ff00",
+                        hideImages: true,
+                        hideVideos: true
+                    });
+                    break;
+                case 'reading':
+                    applyProfileSettings({
+                        fontFamily: "Georgia, serif",
+                        fontSize: "17px",
+                        lineHeight: "2.0",
+                        letterSpacing: "0.05em",
+                        backgroundColor: "#fffacd",
+                        textColor: "#2c3e50",
+                        hideImages: false,
+                        hideVideos: false
+                    });
+                    break;
+                case 'reset':
+                    resetAllChanges();
+                    break;
+            }
+        });
+    });
+}
+
+// Restore saved preferences from storage
+function restoreSavedPreferences() {
+    chrome.storage.local.get([
+        'fontSizePx',
+        'colorBlindnessMode',
+        'dyslexicFont',
+        'lineHeight',
+        'letterSpacing'
+    ], function(result) {
+        console.log('[Adaptive Web Buddy] Restoring saved preferences:', result);
+        
+        // Restore font size
+        if (result.fontSizePx) {
+            const slider = document.getElementById('awb-font-size-slider');
+            if (slider) {
+                slider.value = result.fontSizePx;
+                applyFontSize(result.fontSizePx);
+            }
+        }
+        
+        // Restore colorblindness mode
+        if (result.colorBlindnessMode) {
+            accessibilityFeatures.colorBlindnessMode = result.colorBlindnessMode;
+            applyColorBlindnessMode(result.colorBlindnessMode);
+            
+            // Highlight the active mode in dropdown
+            const colorblindItems = document.querySelectorAll('.awb-colorblind-item');
+            colorblindItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('data-mode') === result.colorBlindnessMode) {
+                    item.classList.add('active');
+                }
+            });
+        }
+        
+        // Restore accessibility features
+        if (result.dyslexicFont) {
+            accessibilityFeatures.dyslexicFont = true;
+            applyDyslexicFont(true);
+            const item = document.getElementById('awb-dyslexicfont-item');
+            if (item) item.classList.add('active');
+        }
+        
+        if (result.lineHeight) {
+            accessibilityFeatures.lineHeight = true;
+            applyLineHeight(true);
+            const item = document.getElementById('awb-lineheight-item');
+            if (item) item.classList.add('active');
+        }
+        
+        if (result.letterSpacing) {
+            accessibilityFeatures.letterSpacing = true;
+            applyLetterSpacing(true);
+            const item = document.getElementById('awb-letterspacing-item');
+            if (item) item.classList.add('active');
+        }
+    });
+}
+
+// Setup feature buttons
+function setupFeatureButtons() {
+    // Font Size Slider with throttling for responsiveness
+    const fontSizeSlider = document.getElementById('awb-font-size-slider');
+    if (fontSizeSlider) {
+        let fontSizeTimeout;
+        
+        fontSizeSlider.addEventListener('input', function() {
+            const fontSize = parseInt(this.value);
+            accessibilityFeatures.fontSize = fontSize;
+            
+            // Apply immediately for visual feedback
+            applyFontSize(fontSize);
+            
+            // Throttle storage update (50ms)
+            clearTimeout(fontSizeTimeout);
+            fontSizeTimeout = setTimeout(() => {
+                chrome.storage.local.set({fontSizePx: fontSize});
+            }, 50);
+        });
+        
+        // Load saved font size
+        chrome.storage.local.get('fontSizePx', function(result) {
+            if (result.fontSizePx) {
+                fontSizeSlider.value = result.fontSizePx;
+                applyFontSize(result.fontSizePx);
+            }
+        });
+    }
+    
+    // Text-to-Speech
+    const ttsBtn = document.getElementById('awb-tts-btn');
+    if (ttsBtn) {
+        ttsBtn.onclick = function() {
+            ttsEnabled = !ttsEnabled;
+            toggleTextToSpeech(ttsEnabled);
+            this.classList.toggle('active', ttsEnabled);
+        };
+    }
+    
+    // Zapper
+    const zapperBtn = document.getElementById('awb-zapper-btn');
+    if (zapperBtn) {
+        zapperBtn.onclick = function() {
+            zapperEnabled = !zapperEnabled;
+            toggleZapper(zapperEnabled);
+            this.classList.toggle('active', zapperEnabled);
+        };
+    }
+    
+    // Colorblindness Dropdown
+    const colorblindBtn = document.getElementById('awb-colorblind-btn');
+    const colorblindDropdown = document.getElementById('awb-colorblind-dropdown');
+    const colorblindItems = document.querySelectorAll('.awb-colorblind-item');
+    
+    console.log('[Adaptive Web Buddy] Colorblind items found:', colorblindItems.length);
+    
+    if (colorblindBtn && colorblindDropdown) {
+        console.log('[Adaptive Web Buddy] Colorblind button found, setting up handlers');
+        
+        colorblindBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Adaptive Web Buddy] Colorblind button clicked');
+            colorblindDropdown.classList.toggle('show');
+            console.log('[Adaptive Web Buddy] Colorblind dropdown toggled, show:', colorblindDropdown.classList.contains('show'));
+        });
+        
+        colorblindItems.forEach((item, index) => {
+            console.log(`[Adaptive Web Buddy] Setting up color item ${index}:`, item.getAttribute('data-mode'));
+            
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const mode = item.getAttribute('data-mode');
+                console.log(`[Adaptive Web Buddy] ✓ COLOR BUTTON CLICKED: ${mode}`);
+                
+                accessibilityFeatures.colorBlindnessMode = mode;
+                applyColorBlindnessMode(mode);
+                
+                // Close dropdown
+                colorblindDropdown.classList.remove('show');
+                console.log(`[Adaptive Web Buddy] Dropdown closed`);
+                
+                // Highlight active mode
+                colorblindItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                console.log(`[Adaptive Web Buddy] ✓ Active mode set to: ${mode}`);
+            });
+        });
+        
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+            const container = document.querySelector('.awb-colorblind-container');
+            if (container && !container.contains(e.target)) {
+                colorblindDropdown.classList.remove('show');
+            }
+        });
+    } else {
+        console.error('[Adaptive Web Buddy] ✗ Colorblind button or dropdown not found');
+        console.log('[Adaptive Web Buddy] Colorblind Button:', colorblindBtn);
+        console.log('[Adaptive Web Buddy] Colorblind Dropdown:', colorblindDropdown);
+    }
+    
+    // Accessibility Settings Dropdown
+    const accessibilityBtn = document.getElementById('awb-accessibility-btn');
+    const accessibilityDropdown = document.getElementById('awb-accessibility-dropdown');
+    const accessibilityItems = document.querySelectorAll('.awb-accessibility-item');
+    
+    if (accessibilityBtn && accessibilityDropdown) {
+        accessibilityBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            accessibilityDropdown.classList.toggle('show');
+        });
+        
+        accessibilityItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const feature = item.getAttribute('data-feature');
+                accessibilityFeatures[feature] = !accessibilityFeatures[feature];
+                
+                if (accessibilityFeatures[feature]) {
+                    applyAccessibilityFeature(feature);
+                    item.classList.add('active');
+                } else {
+                    removeAccessibilityFeature(feature);
+                    item.classList.remove('active');
+                }
+                
+                // Save state
+                chrome.storage.local.set({accessibilityFeatures: accessibilityFeatures});
+            });
+        });
+        
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+            const container = document.querySelector('.awb-accessibility-container');
+            if (container && !container.contains(e.target)) {
+                accessibilityDropdown.classList.remove('show');
+            }
+        });
+    }
+    
+    // AI Summarize Button
+    const aiSummarizeBtn = document.getElementById('awb-ai-summarize-btn');
+    if (aiSummarizeBtn) {
+        console.log('[Adaptive Web Buddy] Summarize button found, attaching handler');
+        aiSummarizeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Adaptive Web Buddy] Summarize button clicked');
+            summarizePageContent();
+            this.classList.toggle('active');
+        });
+    } else {
+        console.error('[Adaptive Web Buddy] Summarize button NOT found');
+    }
+    
+    // Settings Button and Modal
+    const settingsBtn = document.getElementById('awb-settings-btn');
+    const settingsModal = document.getElementById('awb-settings-modal');
+    const closeSettingsBtn = document.getElementById('awb-close-settings');
+    const saveApiKeyBtn = document.getElementById('awb-save-api-key');
+    const clearApiKeyBtn = document.getElementById('awb-clear-api-key');
+    const apiKeyInput = document.getElementById('awb-api-key-input');
+    const apiStatus = document.getElementById('awb-api-status');
+    
+    if (settingsBtn && settingsModal) {
+        // Open settings modal
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsModal.classList.add('show');
+            // Load existing API key
+            chrome.storage.local.get('geminiApiKey', (result) => {
+                if (result.geminiApiKey) {
+                    apiKeyInput.value = result.geminiApiKey;
+                }
+            });
+        });
+        
+        // Close settings modal
+        closeSettingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsModal.classList.remove('show');
+            apiStatus.textContent = '';
+            apiStatus.className = 'awb-settings-status';
+        });
+        
+        // Close on outside click
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                settingsModal.classList.remove('show');
+                apiStatus.textContent = '';
+                apiStatus.className = 'awb-settings-status';
+            }
+        });
+        
+        // Save API Key
+        saveApiKeyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const apiKey = apiKeyInput.value.trim();
+            
+            if (!apiKey) {
+                apiStatus.textContent = '❌ Please enter an API key';
+                apiStatus.className = 'awb-settings-status error';
+                return;
+            }
+            
+            if (apiKey.length < 20) {
+                apiStatus.textContent = '❌ API key seems too short. Please check and try again.';
+                apiStatus.className = 'awb-settings-status error';
+                return;
+            }
+            
+            // Save to storage
+            chrome.storage.local.set({geminiApiKey: apiKey}, () => {
+                apiStatus.textContent = '✅ API Key saved successfully! You can now use Summarize.';
+                apiStatus.className = 'awb-settings-status success';
+                
+                setTimeout(() => {
+                    settingsModal.classList.remove('show');
+                    apiStatus.textContent = '';
+                    apiStatus.className = 'awb-settings-status';
+                }, 2000);
+            });
+        });
+        
+        // Clear API Key
+        clearApiKeyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            chrome.storage.local.remove('geminiApiKey', () => {
+                apiKeyInput.value = '';
+                apiStatus.textContent = '🗑️ API Key cleared';
+                apiStatus.className = 'awb-settings-status info';
+                
+                setTimeout(() => {
+                    apiStatus.textContent = '';
+                    apiStatus.className = 'awb-settings-status';
+                }, 1500);
+            });
+        });
+    }
+}
+
 // Text-to-Speech Functions
 function toggleTextToSpeech(enabled) {
     ttsEnabled = enabled;
@@ -174,24 +835,29 @@ function toggleTextToSpeech(enabled) {
 }
 
 function addTextToSpeechControls() {
-    // Add click listeners to selectable text
-    document.addEventListener('click', function(event) {
-        if (ttsEnabled && event.target.innerText) {
-            const selectedText = getSelectedText() || event.target.innerText;
-            if (selectedText.trim().length > 0) {
-                speakText(selectedText);
-            }
-        }
-    }, true);
-    
-    // Add tooltip to show text-to-speech is enabled
+    document.addEventListener('click', handleTTSClick, true);
     showTTSNotification();
 }
 
 function removeTextToSpeechControls() {
-    // Stop any ongoing speech
+    document.removeEventListener('click', handleTTSClick, true);
     window.speechSynthesis.cancel();
     removeTTSNotification();
+}
+
+function handleTTSClick(event) {
+    if (!ttsEnabled) return;
+    
+    // Don't trigger TTS for clicks on the header
+    const header = document.getElementById('awb-accessibility-header');
+    if (header && header.contains(event.target)) return;
+    
+    if (event.target.innerText) {
+        const selectedText = getSelectedText() || event.target.innerText;
+        if (selectedText.trim().length > 0) {
+            speakText(selectedText);
+        }
+    }
 }
 
 function getSelectedText() {
@@ -204,46 +870,22 @@ function getSelectedText() {
 }
 
 function speakText(text) {
-    // Cancel any ongoing speech
     window.speechSynthesis.cancel();
-    
-    // Create utterance
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
-    
-    // Speak the text
     window.speechSynthesis.speak(utterance);
 }
 
 function showTTSNotification() {
-    // Check if notification already exists
-    if (document.getElementById('tts-notification')) {
-        return;
-    }
+    if (document.getElementById('tts-notification')) return;
     
     const notification = document.createElement('div');
     notification.id = 'tts-notification';
     notification.innerHTML = '🔊 Text-to-Speech Enabled - Click any text to listen';
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #48bb78;
-        color: white;
-        padding: 12px 16px;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        z-index: 10000;
-        box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
-        animation: slideIn 0.3s ease;
-    `;
-    
     document.body.appendChild(notification);
     
-    // Auto-remove after 5 seconds
     setTimeout(() => {
         if (notification.parentNode) {
             notification.remove();
@@ -253,28 +895,7 @@ function showTTSNotification() {
 
 function removeTTSNotification() {
     const notification = document.getElementById('tts-notification');
-    if (notification) {
-        notification.remove();
-    }
-}
-
-// Add animation styles
-if (!document.getElementById('tts-styles')) {
-    const style = document.createElement('style');
-    style.id = 'tts-styles';
-    style.innerHTML = `
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-    `;
-    document.head.appendChild(style);
+    if (notification) notification.remove();
 }
 
 // Accessibility Features Functions
@@ -289,87 +910,130 @@ function toggleAccessibilityFeature(feature, enabled) {
 }
 
 function applyAccessibilityFeature(feature) {
-    const body = document.body;
-    const allElements = document.querySelectorAll('*');
+    const selector = 'p, h1, h2, h3, h4, h5, h6, span, div, li, a, button, label, td, th, article, section, main, nav, aside, blockquote, pre, code, strong, em, b, i';
+    
+    let styleId = `awb-${feature}-style`;
+    let existingStyle = document.getElementById(styleId);
+    if (existingStyle) existingStyle.remove();
+    
+    const style = document.createElement('style');
+    style.id = styleId;
     
     switch(feature) {
-        case 'highContrast':
-            // Apply high contrast mode
-            document.body.style.backgroundColor = '#000000';
-            document.body.style.color = '#FFFF00';
-            allElements.forEach(el => {
-                const currentBg = window.getComputedStyle(el).backgroundColor;
-                const currentColor = window.getComputedStyle(el).color;
-                
-                if (currentBg !== 'rgba(0, 0, 0, 0)' && currentBg !== 'transparent') {
-                    el.style.backgroundColor = '#000000';
-                }
-                if (currentColor !== 'rgba(255, 255, 0, 1)') {
-                    el.style.color = '#FFFF00';
-                }
-            });
-            break;
-            
         case 'dyslexicFont':
-            // Apply dyslexic-friendly font (Comic Sans as fallback)
-            body.style.fontFamily = 'Comic Sans MS, Arial, sans-serif';
-            allElements.forEach(el => {
-                el.style.fontFamily = 'Comic Sans MS, Arial, sans-serif';
-            });
+            style.innerHTML = `${selector} { font-family: 'Comic Sans MS', Arial, sans-serif !important; }`;
             break;
-            
         case 'lineHeight':
-            // Increase line height for better readability
-            body.style.lineHeight = '2.5';
-            allElements.forEach(el => {
-                el.style.lineHeight = '2.5';
-            });
+            style.innerHTML = `${selector} { line-height: 2.5 !important; }`;
             break;
-            
         case 'letterSpacing':
-            // Increase letter spacing
-            body.style.letterSpacing = '0.15em';
-            allElements.forEach(el => {
-                el.style.letterSpacing = '0.15em';
-            });
+            style.innerHTML = `${selector} { letter-spacing: 0.15em !important; }`;
             break;
     }
+    
+    document.head.appendChild(style);
 }
 
 function removeAccessibilityFeature(feature) {
-    const body = document.body;
-    const allElements = document.querySelectorAll('*');
+    let styleId = `awb-${feature}-style`;
+    let existingStyle = document.getElementById(styleId);
+    if (existingStyle) existingStyle.remove();
+}
+
+// Font Size Control - Uses CSS for instant response
+function applyFontSize(fontSizePx) {
+    const targetSize = parseInt(fontSizePx);
     
-    switch(feature) {
-        case 'highContrast':
-            body.style.backgroundColor = '';
-            body.style.color = '';
-            allElements.forEach(el => {
-                el.style.backgroundColor = '';
-                el.style.color = '';
+    // Remove existing font size style
+    let fontSizeStyle = document.getElementById('awb-font-size-style');
+    if (fontSizeStyle) fontSizeStyle.remove();
+    
+    // Create new CSS rule for instant application (excludes header)
+    fontSizeStyle = document.createElement('style');
+    fontSizeStyle.id = 'awb-font-size-style';
+    fontSizeStyle.innerHTML = `
+        body *:not(#awb-accessibility-header):not(#awb-accessibility-header *) {
+            font-size: ${targetSize}px !important;
+        }
+    `;
+    document.head.appendChild(fontSizeStyle);
+}
+
+// Colorblindness Modes - CSS Filter Implementation
+function applyColorBlindnessMode(mode) {
+    console.log(`[Adaptive Web Buddy] Applying colorblindness mode: ${mode}`);
+    
+    // Load and apply the SVG filter from the external file
+    applyColorFilter(mode);
+    
+    // Save preference
+    chrome.storage.local.set({colorBlindnessMode: mode});
+}
+
+// Apply color filter from external SVG file
+function applyColorFilter(filterId) {
+    const body = document.body;
+    
+    console.log(`[Adaptive Web Buddy] ✓ applyColorFilter called with: ${filterId}`);
+    
+    // 1. Remove any existing filter
+    body.style.removeProperty('filter');
+    console.log(`[Adaptive Web Buddy] Removed existing filter`);
+    
+    // 2. If filterId is 'normal', stop here
+    if (filterId === 'normal') {
+        console.log('[Adaptive Web Buddy] ✓ Switched to NORMAL VISION MODE');
+        // Remove the SVG if it exists
+        const existingSvg = document.getElementById('awb-color-filters');
+        if (existingSvg) {
+            existingSvg.remove();
+            console.log('[Adaptive Web Buddy] ✓ SVG removed');
+        }
+        return;
+    }
+
+    // 3. Inject the SVG filter definition into the DOM if it doesn't exist
+    if (!document.getElementById('awb-color-filters')) {
+        console.log('[Adaptive Web Buddy] ✓ Loading SVG filter file...');
+        const filterUrl = chrome.runtime.getURL('assets/filters.svg');
+        console.log('[Adaptive Web Buddy] Filter URL:', filterUrl);
+        
+        // Use fetch to load the SVG content
+        fetch(filterUrl)
+            .then(response => {
+                console.log('[Adaptive Web Buddy] SVG fetch response:', response.status);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.text();
+            })
+            .then(svgText => {
+                console.log('[Adaptive Web Buddy] ✓ SVG file loaded, size:', svgText.length);
+                const parser = new DOMParser();
+                const svgDoc = parser.parseFromString(svgText, "image/svg+xml");
+                const svgElement = svgDoc.documentElement;
+                
+                console.log('[Adaptive Web Buddy] SVG parsed successfully');
+                
+                // Set an ID for easy lookup and make it invisible
+                svgElement.id = 'awb-color-filters';
+                svgElement.style.cssText = 'height: 0; width: 0; position: absolute; overflow: hidden;';
+                
+                // Add to the beginning of the body
+                body.prepend(svgElement);
+                console.log('[Adaptive Web Buddy] ✓ SVG injected into DOM');
+                
+                // 4. Apply the filter URL reference using local anchor
+                body.style.filter = `url(#${filterId})`;
+                console.log(`[Adaptive Web Buddy] ✓✓✓ FILTER APPLIED: url(#${filterId})`);
+            })
+            .catch(error => {
+                console.error("[Adaptive Web Buddy] ✗ Filter Error: Could not load SVG file.", error);
             });
-            break;
             
-        case 'dyslexicFont':
-            body.style.fontFamily = '';
-            allElements.forEach(el => {
-                el.style.fontFamily = '';
-            });
-            break;
-            
-        case 'lineHeight':
-            body.style.lineHeight = '';
-            allElements.forEach(el => {
-                el.style.lineHeight = '';
-            });
-            break;
-            
-        case 'letterSpacing':
-            body.style.letterSpacing = '';
-            allElements.forEach(el => {
-                el.style.letterSpacing = '';
-            });
-            break;
+    } else {
+        // If the SVG is already injected, just update the URL reference using local anchor
+        console.log('[Adaptive Web Buddy] SVG already in DOM, updating filter reference...');
+        body.style.filter = `url(#${filterId})`;
+        console.log(`[Adaptive Web Buddy] ✓✓✓ FILTER UPDATED: url(#${filterId})`);
     }
 }
 
@@ -385,77 +1049,67 @@ function toggleZapper(enabled) {
 }
 
 function enableZapperMode() {
-    // Show cursor indicator
     showZapperCursor();
-    
-    // Add click handler to remove elements
     document.addEventListener('click', zapperClickHandler, true);
-    
-    // Add keyboard handler to exit zapper mode
     document.addEventListener('keydown', zapperKeyHandler, true);
-    
-    // Add hover effect to show which elements can be removed
     document.addEventListener('mouseover', zapperHoverHandler, true);
     document.addEventListener('mouseout', zapperUnhoverHandler, true);
 }
 
 function disableZapperMode() {
-    // Remove event listeners
     document.removeEventListener('click', zapperClickHandler, true);
     document.removeEventListener('keydown', zapperKeyHandler, true);
     document.removeEventListener('mouseover', zapperHoverHandler, true);
     document.removeEventListener('mouseout', zapperUnhoverHandler, true);
     
-    // Reset cursor
-    document.body.style.cursor = 'auto';
+    document.body.style.cursor = '';
     
-    // Remove hover highlights
     const highlighted = document.querySelectorAll('[data-zapper-hover]');
     highlighted.forEach(el => {
         el.style.outline = '';
         el.removeAttribute('data-zapper-hover');
     });
     
-    // Remove cursor indicator
     removeZapperCursor();
 }
 
 function zapperClickHandler(e) {
-    if (zapperEnabled) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const element = e.target;
-        
-        // Don't remove certain elements
-        if (element === document.body || element === document.html || element.tagName === 'SCRIPT' || element.tagName === 'STYLE') {
-            return;
-        }
-        
-        // Store original element before removing
-        removedElements.push({
-            element: element,
-            parent: element.parentNode,
-            nextSibling: element.nextSibling
-        });
-        
-        // Show removal feedback
-        showRemovalFeedback(element);
-        
-        // Remove element
-        setTimeout(() => {
-            element.style.display = 'none';
-        }, 300);
+    if (!zapperEnabled) return;
+    
+    const header = document.getElementById('awb-accessibility-header');
+    if (header && header.contains(e.target)) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const element = e.target;
+    
+    if (element === document.body || element === document.documentElement || 
+        element.tagName === 'SCRIPT' || element.tagName === 'STYLE') {
+        return;
     }
+    
+    removedElements.push({
+        element: element,
+        parent: element.parentNode,
+        nextSibling: element.nextSibling
+    });
+    
+    showRemovalFeedback(element);
+    
+    setTimeout(() => {
+        element.style.display = 'none';
+    }, 300);
 }
 
 function zapperKeyHandler(e) {
-    // Press ESC to exit zapper mode
     if (e.key === 'Escape') {
         zapperEnabled = false;
         disableZapperMode();
         
-        // Send message to popup to deactivate button
+        const zapperBtn = document.getElementById('awb-zapper-btn');
+        if (zapperBtn) zapperBtn.classList.remove('active');
+        
         chrome.runtime.sendMessage({
             action: 'zapperDisabled'
         });
@@ -463,7 +1117,12 @@ function zapperKeyHandler(e) {
 }
 
 function zapperHoverHandler(e) {
-    if (zapperEnabled && e.target !== document.body && e.target !== document.html) {
+    if (!zapperEnabled) return;
+    
+    const header = document.getElementById('awb-accessibility-header');
+    if (header && header.contains(e.target)) return;
+    
+    if (e.target !== document.body && e.target !== document.documentElement) {
         e.target.setAttribute('data-zapper-hover', 'true');
         e.target.style.outline = '3px solid #f5576c';
         e.target.style.outlineOffset = '-3px';
@@ -477,86 +1136,331 @@ function zapperUnhoverHandler(e) {
     }
 }
 
-function showZapperCursor() {
-    // Create a custom cursor style
-    const style = document.createElement('style');
-    style.id = 'zapper-cursor-style';
-    style.innerHTML = `
-        body.zapper-mode * {
-            cursor: crosshair !important;
+// Extract page text for summarization
+function extractPageText() {
+    try {
+        const header = document.getElementById('awb-accessibility-header');
+        
+        // Get all text content from the page
+        let textContent = '';
+        
+        // Method 1: Try using innerText (works better for most pages)
+        if (document.body.innerText) {
+            textContent = document.body.innerText;
         }
-    `;
-    document.head.appendChild(style);
+        
+        // Method 2: If innerText fails, try textContent
+        if (!textContent && document.body.textContent) {
+            textContent = document.body.textContent;
+        }
+        
+        // Method 3: Manual extraction from content elements
+        if (!textContent || textContent.trim().length < 100) {
+            const contentElements = document.querySelectorAll(
+                'p, h1, h2, h3, h4, h5, h6, article, main, section, div[class*="content"], div[class*="article"], div[class*="post"], span'
+            );
+            
+            const texts = Array.from(contentElements)
+                .map(el => el.innerText || el.textContent)
+                .filter(text => text && text.trim().length > 10)
+                .slice(0, 100); // Limit to prevent too much extraction
+            
+            textContent = texts.join('\n');
+        }
+        
+        // Remove header text if present
+        if (header) {
+            const headerText = header.innerText || header.textContent;
+            if (headerText) {
+                textContent = textContent.replace(headerText, '');
+            }
+        }
+        
+        // Clean up text
+        textContent = textContent
+            .replace(/\n{3,}/g, '\n\n') // Remove excessive newlines
+            .replace(/\s{2,}/g, ' ')    // Remove excessive spaces
+            .trim();
+        
+        console.log('[Adaptive Web Buddy] Extracted text length:', textContent.length, 'characters');
+        
+        return textContent;
+    } catch (error) {
+        console.error('[Adaptive Web Buddy] Error extracting text:', error);
+        return '';
+    }
+}
+
+// AI Summarization Functions
+async function summarizePageContent() {
+    console.log('[Adaptive Web Buddy] Summarize started');
+    
+    const statusDiv = document.getElementById('awb-summary-status');
+    const outputDiv = document.getElementById('awb-summary-output');
+    const panelDiv = document.getElementById('awb-summary-panel');
+    const aiBtn = document.getElementById('awb-ai-summarize-btn');
+    
+    console.log('[Adaptive Web Buddy] Elements found:', {
+        statusDiv: !!statusDiv,
+        outputDiv: !!outputDiv,
+        panelDiv: !!panelDiv,
+        aiBtn: !!aiBtn
+    });
+    
+    if (!panelDiv || !statusDiv || !outputDiv) {
+        console.error('[Adaptive Web Buddy] Summary panel elements not found');
+        alert('Error: Summary panel not loaded. Please refresh the page.');
+        return;
+    }
+    
+    // Check if API key is configured
+    const apiKeyData = await chrome.storage.local.get('geminiApiKey');
+    console.log('[Adaptive Web Buddy] API Key check:', { hasKey: !!apiKeyData.geminiApiKey });
+    
+    if (!apiKeyData.geminiApiKey || apiKeyData.geminiApiKey === 'YOUR_API_KEY_HERE') {
+        statusDiv.textContent = '❌ API Key not configured. Click Settings to add your API key.';
+        statusDiv.className = 'awb-summary-status error show';
+        panelDiv.classList.add('show');
+        console.log('[Adaptive Web Buddy] No API key, showing panel with error');
+        return;
+    }
+    
+    statusDiv.textContent = '⏳ Extracting text from page...';
+    statusDiv.className = 'awb-summary-status loading show';
+    outputDiv.classList.remove('show');
+    outputDiv.textContent = '';
+    panelDiv.classList.add('show');
+    console.log('[Adaptive Web Buddy] Panel shown with loading state');
+    
+    try {
+        const pageText = extractPageText();
+        console.log('[Adaptive Web Buddy] Extracted text length:', pageText.length);
+        
+        if (!pageText || pageText.trim().length < 100) {
+            statusDiv.textContent = '❌ Not enough text on this page. Try a news article, blog post, or Wikipedia article.';
+            statusDiv.className = 'awb-summary-status error show';
+            console.log('[Adaptive Web Buddy] Insufficient text on page (minimum 100 chars required)');
+            return;
+        }
+        
+        statusDiv.textContent = '🔄 Generating summary... Please wait 10-30 seconds...';
+        statusDiv.className = 'awb-summary-status loading show';
+        console.log('[Adaptive Web Buddy] Sending to API...');
+        
+        // Call Gemini API
+        const summary = await callGeminiAPI(pageText, apiKeyData.geminiApiKey);
+        
+        if (summary && summary.trim().length > 0) {
+            statusDiv.textContent = '✅ Summary generated successfully!';
+            statusDiv.className = 'awb-summary-status success show';
+            outputDiv.textContent = summary;
+            outputDiv.classList.add('show');
+            console.log('[Adaptive Web Buddy] Summary displayed successfully');
+        } else {
+            statusDiv.textContent = '❌ Failed to generate summary. Try again.';
+            statusDiv.className = 'awb-summary-status error show';
+            console.log('[Adaptive Web Buddy] Empty summary received');
+        }
+        
+    } catch (error) {
+        console.error('[Adaptive Web Buddy] Summarization error:', error);
+        
+        let errorMsg = error.message || 'Unknown error occurred';
+        if (errorMsg.includes('timeout')) {
+            errorMsg = 'Request took too long. Try with shorter content.';
+        }
+        if (errorMsg.includes('API')) {
+            errorMsg = 'API error: Check your API key in Settings.';
+        }
+        
+        statusDiv.textContent = `❌ ${errorMsg}`;
+        statusDiv.className = 'awb-summary-status error show';
+        console.log('[Adaptive Web Buddy] Error shown:', errorMsg);
+    }
+}
+
+// Call Gemini API with multiple model fallbacks
+async function callGeminiAPI(text, apiKey) {
+    const TIMEOUT = 60000;
+    const MAX_RETRIES = 1;
+    
+    const modelsToTry = [
+        'gemini-2.0-flash-exp',
+        'gemini-2.0-flash',
+        'gemini-1.5-pro',
+        'gemini-1.5-flash-8b'
+    ];
+    
+    let lastError;
+    
+    for (const model of modelsToTry) {
+        console.log(`[Adaptive Web Buddy] Trying model: ${model}`);
+        
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                const words = text.split(/\s+/);
+                const truncatedText = words.slice(0, 2000).join(' ');
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
+                
+                const response = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{
+                                    text: `Create a clear, concise summary of this webpage in exactly 5-6 lines or bullet points. Each line should be short and easy to read (15-30 words max). Focus on the main ideas only:\n\n${truncatedText}`
+                                }]
+                            }],
+                            generationConfig: {
+                                maxOutputTokens: 300,
+                                temperature: 0.5
+                            }
+                        }),
+                        signal: controller.signal
+                    }
+                );
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMsg = errorData.error?.message || `HTTP ${response.status}`;
+                    
+                    console.log(`[Adaptive Web Buddy] Response status: ${response.status}, message: ${errorMsg}`);
+                    
+                    if (response.status === 404 || errorMsg.includes('not found')) {
+                        console.warn(`[Adaptive Web Buddy] ${model} not found, trying next model...`);
+                        lastError = new Error(`${model} not available`);
+                        break;
+                    }
+                    
+                    if (response.status === 401 || errorMsg.includes('API key')) {
+                        throw new Error('Invalid API key. Please check your API key in Settings.');
+                    }
+                    
+                    if (response.status === 429) {
+                        throw new Error('API rate limit exceeded. Try again in a few moments.');
+                    }
+                    
+                    throw new Error(errorMsg);
+                }
+                
+                const data = await response.json();
+                console.log(`[Adaptive Web Buddy] API response received from ${model}`);
+                
+                const summary = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (!summary) {
+                    console.warn('[Adaptive Web Buddy] No summary text in response');
+                    throw new Error('No summary received from API');
+                }
+                
+                console.log(`[Adaptive Web Buddy] ✓ Summary generated with ${model} (${summary.length} chars)`);
+                return summary;
+                
+            } catch (error) {
+                lastError = error;
+                console.error(`[Adaptive Web Buddy] ${model} error:`, error.message);
+                
+                if (error.name === 'AbortError') {
+                    break;
+                }
+                
+                if (attempt < MAX_RETRIES) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+        }
+    }
+    
+    if (lastError?.name === 'AbortError') {
+        throw new Error('Request timeout after 60 seconds. Try with shorter content.');
+    }
+    
+    throw new Error(`All models failed. Last error: ${lastError?.message || 'Unknown'}`);
+}
+
+function showZapperCursor() {
+    if (!document.getElementById('zapper-cursor-style')) {
+        const style = document.createElement('style');
+        style.id = 'zapper-cursor-style';
+        style.innerHTML = `
+            body.zapper-mode * {
+                cursor: crosshair !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
     document.body.classList.add('zapper-mode');
 }
 
 function removeZapperCursor() {
     const style = document.getElementById('zapper-cursor-style');
-    if (style) {
-        style.remove();
-    }
+    if (style) style.remove();
     document.body.classList.remove('zapper-mode');
 }
 
 function showRemovalFeedback(element) {
-    // Add a visual feedback animation
     element.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
     element.style.opacity = '0.5';
     element.style.transform = 'scale(0.95)';
 }
 
-function showZapperCursor() {
-    document.body.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="none" stroke="%23f5576c" stroke-width="2"/><line x1="16" y1="5" x2="16" y2="10" stroke="%23f5576c" stroke-width="2"/><line x1="16" y1="22" x2="16" y2="27" stroke="%23f5576c" stroke-width="2"/><line x1="5" y1="16" x2="10" y2="16" stroke="%23f5576c" stroke-width="2"/><line x1="22" y1="16" x2="27" y2="16" stroke="%23f5576c" stroke-width="2"/></svg>') 16 16, crosshair`;
-}// content/contentScript.js
+// Function to apply the filter to the <body>
+function applyColorFilter(filterId) {
+    const body = document.body;
+    
+    // 1. Remove any existing filter
+    body.style.removeProperty('filter');
+    
+    // 2. If filterId is 'normal' or null, stop here
+    if (filterId === 'normal') {
+        return;
+    }
 
-chrome.runtime.onMessage.addListener(
-    (request, sender, sendResponse) => {
-        // Check for the summarization action
-        if (request.action === "REQUEST_PAGE_TEXT") {
-            // Extract all visible text from the body
-            const fullText = document.body.innerText; 
+    // 3. Inject the SVG filter definition into the DOM if it doesn't exist
+    if (!document.getElementById('awb-color-filters')) {
+        // Assume filters.svg is in an 'assets' folder
+        const filterUrl = chrome.runtime.getURL('assets/filters.svg');
+        
+        // Use fetch to load the SVG content
+        fetch(filterUrl)
+            .then(response => response.text())
+            .then(svgText => {
+                const parser = new DOMParser();
+                const svgDoc = parser.parseFromString(svgText, "image/svg+xml");
+                const svgElement = svgDoc.documentElement;
+                
+                // Set an ID for easy lookup and make it invisible
+                svgElement.id = 'awb-color-filters';
+                svgElement.style.cssText = 'height: 0; width: 0; position: absolute; overflow: hidden;';
+                
+                // Add to the beginning of the body
+                body.prepend(svgElement);
+                
+                // 4. Apply the filter URL reference
+                body.style.filter = `url(${filterUrl}#${filterId})`;
+            })
+            .catch(error => console.error("AWB Filter Error: Could not load SVG file.", error));
             
-            // Send the raw text back to the popup.js
-            sendResponse({ text: fullText }); 
-
-            // Return true to indicate the response will be sent asynchronously (important for fetch)
-            return true; 
-        }
+    } else {
+        // If the SVG is already injected, just update the URL reference
+        const filterUrlBase = chrome.runtime.getURL('assets/filters.svg');
+        body.style.filter = `url(${filterUrlBase}#${filterId})`;
     }
-);
-
-// Function to extract all text from the page (OPTIMIZED for speed)
-function extractPageText() {
-    // Use direct DOM traversal instead of cloning (much faster)
-    const textContent = [];
-    
-    // Skip these elements
-    const skipSelectors = 'script, style, noscript, iframe, nav, .hidden, [hidden], [aria-hidden="true"]';
-    const skipSet = new Set(document.querySelectorAll(skipSelectors));
-    
-    // Extract text from main content areas first (faster)
-    const mainSelectors = ['main', 'article', '.content', '.post', '#content', '.entry-content'];
-    let foundMain = false;
-    
-    for (let selector of mainSelectors) {
-        const elem = document.querySelector(selector);
-        if (elem && elem.innerText && elem.innerText.length > 100) {
-            let text = elem.innerText.trim();
-            text = text.replace(/\s+/g, ' ').slice(0, 5000); // Limit to first 5000 chars for speed
-            if (text.length > 100) {
-                textContent.push(text);
-                foundMain = true;
-                break;
-            }
-        }
-    }
-    
-    // If main content not found, get body text
-    if (!foundMain) {
-        let text = document.body.innerText || document.documentElement.innerText;
-        text = text.replace(/\s+/g, ' ').slice(0, 5000); // Limit to first 5000 chars
-        textContent.push(text);
-    }
-    
-    return textContent.join('\n').trim();
 }
+
+
+// Listener to receive messages from popup.js
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'APPLY_COLOR_MODE') {
+        applyColorFilter(request.mode);
+    }
+    // No response needed for this action
+});

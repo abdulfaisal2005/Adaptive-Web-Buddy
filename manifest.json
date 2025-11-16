@@ -13,24 +13,28 @@
     "host_permissions": [
         "<all_urls>"
     ],
-    
-    "action": {
-        "default_popup": "popup/popup.html",
-        "default_title": "Adaptive Web Buddy",
-        "default_icon": "accessibility.png"
-    },
-    "icons":{
-        "128": "accessibility.png",
-        "64": "accessibility.png",
-        "32": "accessibility.png",
-        "16": "accessibility.png"
+
+    "icons": {
+        "16": "icons/icon16.png",
+        "32": "icons/icon32.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png",
+        "256": "icons/icon256.png"
     },
     
     "content_scripts": [
         {
             "matches": ["<all_urls>"],
             "js": ["content/contentScript.js"],
+            "css": ["content/header.css"],
             "run_at": "document_start"
+        }
+    ],
+    
+    "web_accessible_resources": [
+        {
+            "resources": ["assets/filters.svg", "icons/*"],
+            "matches": ["<all_urls>"]
         }
     ]
 }
