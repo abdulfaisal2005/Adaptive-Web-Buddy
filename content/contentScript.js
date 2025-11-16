@@ -12,7 +12,6 @@ let accessibilityFeatures = {
     dyslexicFont: false,
     lineHeight: false,
     letterSpacing: false,
-    colorBlindnessMode: 'normal', // normal, deuteranopia, protanopia, tritanopia
     fontSize: 100 // percentage, default 100%
 };
 
@@ -193,17 +192,6 @@ window.addEventListener('load', function() {
             <button id="awb-tts-btn" class="awb-feature-btn">🔊 TTS</button>
             <button id="awb-zapper-btn" class="awb-feature-btn">⚡ Zapper</button>
             
-            <!-- Colorblindness Modes Dropdown -->
-            <div class="awb-colorblind-container">
-                <button id="awb-colorblind-btn" class="awb-feature-btn" title="Color Blindness Modes">🎨 Color</button>
-                <div id="awb-colorblind-dropdown" class="awb-colorblind-dropdown">
-                    <button class="awb-colorblind-item" data-mode="normal">👁️ Normal Vision</button>
-                    <button class="awb-colorblind-item" data-mode="deuteranopia">🟢 Deuteranopia</button>
-                    <button class="awb-colorblind-item" data-mode="protanopia">🔴 Protanopia</button>
-                    <button class="awb-colorblind-item" data-mode="tritanopia">🔵 Tritanopia</button>
-                </div>
-            </div>
-            
             <!-- Accessibility Settings Dropdown -->
             <div class="awb-accessibility-container">
                 <button id="awb-accessibility-btn" class="awb-feature-btn" title="Accessibility Settings">⚙️ Accessibility</button>
@@ -227,6 +215,10 @@ window.addEventListener('load', function() {
             <button id="awb-settings-btn" class="awb-feature-btn" title="Settings">⚙️ Settings</button>
         </div>
         <div id="awb-summary-panel" class="awb-summary-panel">
+            <div class="awb-summary-header">
+                <h3 class="awb-summary-title">✨ AI Summary</h3>
+                <button id="awb-close-summary-btn" class="awb-summary-close-btn" title="Close">✕</button>
+            </div>
             <div id="awb-summary-status" class="awb-summary-status"></div>
             <div id="awb-summary-output" class="awb-summary-output"></div>
         </div>
@@ -523,7 +515,7 @@ function setupModeButtons() {
 function restoreSavedPreferences() {
     chrome.storage.local.get([
         'fontSizePx',
-        'colorBlindnessMode',
+
         'dyslexicFont',
         'lineHeight',
         'letterSpacing'
@@ -538,21 +530,7 @@ function restoreSavedPreferences() {
                 applyFontSize(result.fontSizePx);
             }
         }
-        
-        // Restore colorblindness mode
-        if (result.colorBlindnessMode) {
-            accessibilityFeatures.colorBlindnessMode = result.colorBlindnessMode;
-            applyColorBlindnessMode(result.colorBlindnessMode);
-            
-            // Highlight the active mode in dropdown
-            const colorblindItems = document.querySelectorAll('.awb-colorblind-item');
-            colorblindItems.forEach(item => {
-                item.classList.remove('active');
-                if (item.getAttribute('data-mode') === result.colorBlindnessMode) {
-                    item.classList.add('active');
-                }
-            });
-        }
+
         
         // Restore accessibility features
         if (result.dyslexicFont) {
@@ -629,59 +607,6 @@ function setupFeatureButtons() {
     }
     
     // Colorblindness Dropdown
-    const colorblindBtn = document.getElementById('awb-colorblind-btn');
-    const colorblindDropdown = document.getElementById('awb-colorblind-dropdown');
-    const colorblindItems = document.querySelectorAll('.awb-colorblind-item');
-    
-    console.log('[Adaptive Web Buddy] Colorblind items found:', colorblindItems.length);
-    
-    if (colorblindBtn && colorblindDropdown) {
-        console.log('[Adaptive Web Buddy] Colorblind button found, setting up handlers');
-        
-        colorblindBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('[Adaptive Web Buddy] Colorblind button clicked');
-            colorblindDropdown.classList.toggle('show');
-            console.log('[Adaptive Web Buddy] Colorblind dropdown toggled, show:', colorblindDropdown.classList.contains('show'));
-        });
-        
-        colorblindItems.forEach((item, index) => {
-            console.log(`[Adaptive Web Buddy] Setting up color item ${index}:`, item.getAttribute('data-mode'));
-            
-            item.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const mode = item.getAttribute('data-mode');
-                console.log(`[Adaptive Web Buddy] ✓ COLOR BUTTON CLICKED: ${mode}`);
-                
-                accessibilityFeatures.colorBlindnessMode = mode;
-                applyColorBlindnessMode(mode);
-                
-                // Close dropdown
-                colorblindDropdown.classList.remove('show');
-                console.log(`[Adaptive Web Buddy] Dropdown closed`);
-                
-                // Highlight active mode
-                colorblindItems.forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-                console.log(`[Adaptive Web Buddy] ✓ Active mode set to: ${mode}`);
-            });
-        });
-        
-        // Close on outside click
-        document.addEventListener('click', (e) => {
-            const container = document.querySelector('.awb-colorblind-container');
-            if (container && !container.contains(e.target)) {
-                colorblindDropdown.classList.remove('show');
-            }
-        });
-    } else {
-        console.error('[Adaptive Web Buddy] ✗ Colorblind button or dropdown not found');
-        console.log('[Adaptive Web Buddy] Colorblind Button:', colorblindBtn);
-        console.log('[Adaptive Web Buddy] Colorblind Dropdown:', colorblindDropdown);
-    }
-    
     // Accessibility Settings Dropdown
     const accessibilityBtn = document.getElementById('awb-accessibility-btn');
     const accessibilityDropdown = document.getElementById('awb-accessibility-dropdown');
@@ -819,6 +744,32 @@ function setupFeatureButtons() {
                 }, 1500);
             });
         });
+    }
+    
+    // Summary Panel Close Button
+    const closeSummaryBtn = document.getElementById('awb-close-summary-btn');
+    const summaryPanel = document.getElementById('awb-summary-panel');
+    
+    if (closeSummaryBtn && summaryPanel) {
+        console.log('[Adaptive Web Buddy] Summary close button found, attaching handler');
+        
+        // Close summary panel when close button is clicked
+        closeSummaryBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            summaryPanel.classList.remove('show');
+            console.log('[Adaptive Web Buddy] Summary panel closed by user');
+        });
+        
+        // Close on outside click
+        summaryPanel.addEventListener('click', (e) => {
+            if (e.target === summaryPanel) {
+                summaryPanel.classList.remove('show');
+                console.log('[Adaptive Web Buddy] Summary panel closed by clicking outside');
+            }
+        });
+    } else {
+        if (!closeSummaryBtn) console.warn('[Adaptive Web Buddy] Summary close button NOT found');
+        if (!summaryPanel) console.warn('[Adaptive Web Buddy] Summary panel NOT found');
     }
 }
 
@@ -960,83 +911,6 @@ function applyFontSize(fontSizePx) {
 }
 
 // Colorblindness Modes - CSS Filter Implementation
-function applyColorBlindnessMode(mode) {
-    console.log(`[Adaptive Web Buddy] Applying colorblindness mode: ${mode}`);
-    
-    // Load and apply the SVG filter from the external file
-    applyColorFilter(mode);
-    
-    // Save preference
-    chrome.storage.local.set({colorBlindnessMode: mode});
-}
-
-// Apply color filter from external SVG file
-function applyColorFilter(filterId) {
-    const body = document.body;
-    
-    console.log(`[Adaptive Web Buddy] ✓ applyColorFilter called with: ${filterId}`);
-    
-    // 1. Remove any existing filter
-    body.style.removeProperty('filter');
-    console.log(`[Adaptive Web Buddy] Removed existing filter`);
-    
-    // 2. If filterId is 'normal', stop here
-    if (filterId === 'normal') {
-        console.log('[Adaptive Web Buddy] ✓ Switched to NORMAL VISION MODE');
-        // Remove the SVG if it exists
-        const existingSvg = document.getElementById('awb-color-filters');
-        if (existingSvg) {
-            existingSvg.remove();
-            console.log('[Adaptive Web Buddy] ✓ SVG removed');
-        }
-        return;
-    }
-
-    // 3. Inject the SVG filter definition into the DOM if it doesn't exist
-    if (!document.getElementById('awb-color-filters')) {
-        console.log('[Adaptive Web Buddy] ✓ Loading SVG filter file...');
-        const filterUrl = chrome.runtime.getURL('assets/filters.svg');
-        console.log('[Adaptive Web Buddy] Filter URL:', filterUrl);
-        
-        // Use fetch to load the SVG content
-        fetch(filterUrl)
-            .then(response => {
-                console.log('[Adaptive Web Buddy] SVG fetch response:', response.status);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                return response.text();
-            })
-            .then(svgText => {
-                console.log('[Adaptive Web Buddy] ✓ SVG file loaded, size:', svgText.length);
-                const parser = new DOMParser();
-                const svgDoc = parser.parseFromString(svgText, "image/svg+xml");
-                const svgElement = svgDoc.documentElement;
-                
-                console.log('[Adaptive Web Buddy] SVG parsed successfully');
-                
-                // Set an ID for easy lookup and make it invisible
-                svgElement.id = 'awb-color-filters';
-                svgElement.style.cssText = 'height: 0; width: 0; position: absolute; overflow: hidden;';
-                
-                // Add to the beginning of the body
-                body.prepend(svgElement);
-                console.log('[Adaptive Web Buddy] ✓ SVG injected into DOM');
-                
-                // 4. Apply the filter URL reference using local anchor
-                body.style.filter = `url(#${filterId})`;
-                console.log(`[Adaptive Web Buddy] ✓✓✓ FILTER APPLIED: url(#${filterId})`);
-            })
-            .catch(error => {
-                console.error("[Adaptive Web Buddy] ✗ Filter Error: Could not load SVG file.", error);
-            });
-            
-    } else {
-        // If the SVG is already injected, just update the URL reference using local anchor
-        console.log('[Adaptive Web Buddy] SVG already in DOM, updating filter reference...');
-        body.style.filter = `url(#${filterId})`;
-        console.log(`[Adaptive Web Buddy] ✓✓✓ FILTER UPDATED: url(#${filterId})`);
-    }
-}
-
 // Zapper Functions
 function toggleZapper(enabled) {
     zapperEnabled = enabled;
@@ -1413,54 +1287,7 @@ function showRemovalFeedback(element) {
 }
 
 // Function to apply the filter to the <body>
-function applyColorFilter(filterId) {
-    const body = document.body;
-    
-    // 1. Remove any existing filter
-    body.style.removeProperty('filter');
-    
-    // 2. If filterId is 'normal' or null, stop here
-    if (filterId === 'normal') {
-        return;
-    }
-
-    // 3. Inject the SVG filter definition into the DOM if it doesn't exist
-    if (!document.getElementById('awb-color-filters')) {
-        // Assume filters.svg is in an 'assets' folder
-        const filterUrl = chrome.runtime.getURL('assets/filters.svg');
-        
-        // Use fetch to load the SVG content
-        fetch(filterUrl)
-            .then(response => response.text())
-            .then(svgText => {
-                const parser = new DOMParser();
-                const svgDoc = parser.parseFromString(svgText, "image/svg+xml");
-                const svgElement = svgDoc.documentElement;
-                
-                // Set an ID for easy lookup and make it invisible
-                svgElement.id = 'awb-color-filters';
-                svgElement.style.cssText = 'height: 0; width: 0; position: absolute; overflow: hidden;';
-                
-                // Add to the beginning of the body
-                body.prepend(svgElement);
-                
-                // 4. Apply the filter URL reference
-                body.style.filter = `url(${filterUrl}#${filterId})`;
-            })
-            .catch(error => console.error("AWB Filter Error: Could not load SVG file.", error));
-            
-    } else {
-        // If the SVG is already injected, just update the URL reference
-        const filterUrlBase = chrome.runtime.getURL('assets/filters.svg');
-        body.style.filter = `url(${filterUrlBase}#${filterId})`;
-    }
-}
-
-
 // Listener to receive messages from popup.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'APPLY_COLOR_MODE') {
-        applyColorFilter(request.mode);
-    }
-    // No response needed for this action
+    // Message handler for future extensibility
 });

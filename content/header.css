@@ -165,56 +165,6 @@
     background: #5568d3 !important;
 }
 
-/* Colorblindness Dropdown Container */
-#awb-accessibility-header .awb-colorblind-container {
-    position: relative !important;
-    display: inline-block !important;
-}
-
-#awb-accessibility-header .awb-colorblind-dropdown {
-    display: none !important;
-    position: absolute !important;
-    top: 100% !important;
-    left: 0 !important;
-    margin-top: 8px !important;
-    background: #ffffff !important;
-    border: 2px solid #222222 !important;
-    border-radius: 6px !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-    min-width: 180px !important;
-    z-index: 2147483647 !important;
-    padding: 4px 0 !important;
-}
-
-#awb-accessibility-header .awb-colorblind-dropdown.show {
-    display: block !important;
-}
-
-#awb-accessibility-header .awb-colorblind-item {
-    display: block !important;
-    width: 100% !important;
-    padding: 12px 18px !important;
-    border: none !important;
-    background: #ffffff !important;
-    color: #222222 !important;
-    text-align: left !important;
-    cursor: pointer !important;
-    font-size: 15px !important;
-    font-weight: 500 !important;
-    transition: background 0.2s ease !important;
-    border-radius: 0 !important;
-}
-
-#awb-accessibility-header .awb-colorblind-item:hover {
-    background: #f0f0f0 !important;
-}
-
-#awb-accessibility-header .awb-colorblind-item.active {
-    background: #667eea !important;
-    color: #ffffff !important;
-    font-weight: 600 !important;
-}
-
 /* Accessibility Settings Dropdown Container */
 #awb-accessibility-header .awb-accessibility-container {
     position: relative !important;
@@ -530,6 +480,50 @@
 
 #awb-accessibility-header .awb-summary-panel.show {
     display: flex !important;
+}
+
+/* Summary panel header */
+#awb-accessibility-header .awb-summary-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 16px 20px !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border-bottom: 2px solid #667eea !important;
+}
+
+#awb-accessibility-header .awb-summary-title {
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 18px !important;
+    font-weight: bold !important;
+    color: #ffffff !important;
+}
+
+#awb-accessibility-header .awb-summary-close-btn {
+    background: transparent !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-size: 24px !important;
+    font-weight: bold !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+    transition: all 0.2s ease !important;
+}
+
+#awb-accessibility-header .awb-summary-close-btn:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    transform: scale(1.1) !important;
+}
+
+#awb-accessibility-header .awb-summary-close-btn:active {
+    transform: scale(0.95) !important;
 }
 
 /* Summary status message */
